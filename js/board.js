@@ -180,7 +180,19 @@
 
     /* ------------------------------------------------------------ rendering */
     render(state, opts) { this.state = state; this.layout(opts || {}); }
-    relayout() { if (this.state && this.measure()) this.layout({ instant: true }); }
+    relayout() {
+      if (!this.state) return;
+      if (this.drag) this.abortDrag(); // a resize / rotation mid-drag: put the cards back rather than strand them
+      if (this.measure()) this.layout({ instant: true });
+    }
+    abortDrag() {
+      const d = this.drag;
+      this.drag = null;
+      this.pending = null;
+      this.root.classList.remove('is-dragging');
+      d.ids.forEach(id => { const el = this.els.get(id); el.classList.remove('dragging'); el.style.rotate = ''; });
+      this.refreshMarks();
+    }
 
     layout(opts) {
       if (!this.state || !this.measure()) return;
@@ -458,9 +470,8 @@
       if (!p || p.id !== e.pointerId) return;
       this.pending = null;
       if (this.drag) {
-        const d = this.drag; this.drag = null;
-        this.root.classList.remove('is-dragging');
-        d.ids.forEach(id => { const el = this.els.get(id); el.classList.remove('dragging'); el.style.rotate = ''; this.returning.add(id); });
+        this.drag.ids.forEach(id => this.returning.add(id));
+        this.abortDrag();
         this.layout({});
       }
     }

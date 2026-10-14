@@ -30,7 +30,9 @@
       const m = { close, el: wrap };
       modals.push(m);
       NS.bus.emit('modal', true);
-      setTimeout(() => { const f = dlg.querySelector('[autofocus], .modal-actions .primary, .cz-tabs .on, input, button'); if (f) f.focus(); }, 40);
+      if (!window.matchMedia('(pointer: coarse)').matches) { // no stray focus ring / keyboard pop-up on touch screens
+        setTimeout(() => { const f = dlg.querySelector('[autofocus], .modal-actions .primary, .cz-tabs .on, input, button'); if (f) f.focus({ preventScroll: true }); }, 40);
+      }
       return m;
     },
     closeAll() { modals.slice().forEach(m => m.close()); },
@@ -192,7 +194,7 @@
         case 'd': case ' ': e.preventDefault(); if (!g.busy && !g.won) { g.clearSel(); g.drawStock(); } break;
         default: break;
       }
-    });
+    }, true); // capture: inputs stop propagation of their own keys, but Escape must always get through
 
     /* keep the clock honest while hidden tabs sleep: persist on leave */
     window.addEventListener('pagehide', () => { g.saveNow(); });

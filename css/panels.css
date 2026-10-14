@@ -154,7 +154,7 @@ body.drawer-open .drawer { transform: none; box-shadow: -20px 0 60px rgba(0, 0, 
 /* ================================================================ customize dialog */
 .cz { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .cz-tabs { display: flex; gap: 4px; padding: 0 16px 8px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--glass-border); flex: none; }
-.cz-tabs button { border: 0; background: none; padding: 8px 13px; border-radius: 11px; font-weight: 800; font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+.cz-tabs button { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 8px 13px; border-radius: 11px; font-weight: 800; font-size: 13.5px; color: var(--muted); white-space: nowrap; }
 .cz-tabs button:hover { background: var(--hover); color: var(--text); }
 .cz-tabs button.on { background: rgba(var(--accent-rgb), .2); color: var(--accent); }
 .cz-content { flex: 1; overflow-y: auto; padding: 6px 22px 28px; min-height: 0; }
@@ -188,8 +188,8 @@ body.drawer-open .drawer { transform: none; box-shadow: -20px 0 60px rgba(0, 0, 
 .swatches { gap: 8px; }
 .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .25); padding: 0; }
 .swatch.on { outline: 2px solid #fff; outline-offset: 2px; }
-.wrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.wrow .toggle { flex: 1; }
+.wrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.wrow .toggle { flex: 1 1 200px; }
 .drow { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed rgba(255, 255, 255, .08); font-size: 14px; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
@@ -221,4 +221,60 @@ body.drawer-open .drawer { transform: none; box-shadow: -20px 0 60px rgba(0, 0, 
   .modal.wide { height: min(90dvh, 720px); }
   .modal-body { padding-left: 16px; padding-right: 16px; }
   .tiles { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}
+
+/* ================================================================ phone refinements for panels */
+@media (max-width: 760px) {
+  .cz-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 0 8px 8px; overflow: visible; }
+  .cz-tabs button { flex-direction: column; gap: 1px; padding: 6px 0; font-size: 11.5px; min-width: 0; }
+  .cz-tabs .tab-ico { font-size: 18px; line-height: 1.2; }
+  .cz-content { padding: 4px 16px 24px; }
+  .row .text { min-width: 0; flex: 1 1 100%; }
+  .row .btn { flex: 1 1 auto; }
+  .seg { max-width: 100%; }
+  .seg button { padding: 8px 11px; flex: 1 1 auto; }
+  .field-head { flex-wrap: wrap; gap: 2px 10px; }
+  .field-head small { text-align: left; flex-basis: 100%; }
+  .toggle { min-height: 44px; }
+  .range { height: 32px; }
+  .range::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -8.5px; }
+  .range::-moz-range-thumb { width: 20px; height: 20px; }
+  .swatch { width: 36px; height: 36px; }
+  .color input { width: 44px; height: 38px; }
+  .wrow .toggle { flex: 1 1 130px; }
+  .wrow .seg { flex: none; }
+  .wrow .seg button { flex: none; padding: 7px 12px; }
+  .win-grid b { font-size: 22px; }
+  .drow { padding: 8px 0; }
+  /* music panel as a sheet above the dock */
+  .music-panel { position: fixed; left: 8px; right: 8px; width: auto; bottom: calc(70px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 90px - env(safe-area-inset-bottom)); border-radius: 20px; transform-origin: 50% 100%; }
+  .mp-input { font-size: 16px; } /* stops iOS zooming into the field */
+  .text, .num, input[type="url"], input[type="text"] { font-size: 16px; }
+  .mp-controls .ico { width: 42px; height: 42px; }
+  .mp-controls .ico.small { width: 38px; height: 38px; }
+  .mp-row { padding: 9px 4px 9px 8px; }
+  .mp-queue { max-height: 160px; }
+  .mp-vol-wrap { width: 36%; }
+  .drawer { width: min(360px, 94vw); }
+  .tray { left: 8px; right: 8px; transform: none; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: none; justify-content: flex-start; }
+  .tray .btn.primary { margin-left: auto; }
+  body.arranging .w-tools .ico.small { width: 36px; height: 36px; }
+  .w-head { flex-wrap: wrap; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  .music-panel { max-height: calc(100dvh - 66px); width: min(420px, calc(100vw - 16px)); right: auto; }
+  .mp-embed.has { max-height: 38dvh; }
+  .cz-tabs { grid-template-columns: repeat(5, auto); justify-content: start; }
+  .cz-tabs button { flex-direction: row; font-size: 12.5px; }
+}
+
+/* drawer mode has no left/right rails: hide the side-moving buttons, keep room for the tray */
+@media (max-width: 1179px) {
+  .w-tools button:nth-child(1), .w-tools button:nth-child(4) { display: none; }
+  body.arranging .drawer-list { padding-bottom: 150px; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  .cz-tabs { gap: 4px; }
+  .cz-tabs button { padding: 6px 12px; gap: 6px; }
+  .tray { left: 8px; right: auto; transform: none; max-width: 52vw; }
 }

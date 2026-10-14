@@ -206,7 +206,7 @@
           h('button.btn.danger', { onclick: () => { if (confirm('Erase everything saved by this game in your browser (game, stats, settings, music list, notes)?')) { NS.store.clearAll(); location.reload(); } } }, 'Erase all data')))];
   }
 
-  const TABS = [['look', '🎨 Look', tabLook], ['game', '🂡 Game', tabGame], ['widgets', '🧩 Widgets', tabWidgets], ['sound', '🔊 Sound', tabSound], ['data', '💾 Data', tabData]];
+  const TABS = [['look', '🎨', 'Look', tabLook], ['game', '🂡', 'Game', tabGame], ['widgets', '🧩', 'Widgets', tabWidgets], ['sound', '🔊', 'Sound', tabSound], ['data', '💾', 'Data', tabData]];
   let lastTab = 'look';
 
   function open(tabId) {
@@ -215,11 +215,11 @@
     const tabs = h('div.cz-tabs', { role: 'tablist' });
     function renderTabs() {
       tabs.innerHTML = '';
-      TABS.forEach(([id, label]) => tabs.append(h('button' + (id === cur ? '.on' : ''), { role: 'tab', 'aria-selected': String(id === cur), onclick: () => { cur = id; lastTab = id; content.scrollTop = 0; renderTabs(); render(); } }, label)));
+      TABS.forEach(([id, icon, label]) => tabs.append(h('button' + (id === cur ? '.on' : ''), { role: 'tab', 'aria-selected': String(id === cur), onclick: () => { cur = id; lastTab = id; content.scrollTop = 0; renderTabs(); render(); } }, h('span.tab-ico', icon), h('span.tab-lbl', label))));
     }
     function render() {
       const top = content.scrollTop;
-      const fn = TABS.find(t => t[0] === cur)[2];
+      const fn = TABS.find(t => t[0] === cur)[3];
       content.innerHTML = '';
       fn(render).forEach(n => content.append(n));
       content.scrollTop = top;
