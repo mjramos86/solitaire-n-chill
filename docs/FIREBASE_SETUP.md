@@ -1,5 +1,7 @@
 # Setting up cloud sync (Google sign-in)
 
+> Version française, avec les libellés de la console en français : [FIREBASE_SETUP.fr.md](FIREBASE_SETUP.fr.md)
+
 Cloud sync is **optional and off by default**. The game ships with `js/firebase-config.js` set to `null`;
 until you paste a Firebase config there, nobody sees any sign-in UI and no Google script is loaded.
 

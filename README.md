@@ -27,7 +27,7 @@ Clock · Weather (Open-Meteo, no key) · **News** · This game · Focus timer (p
 
 **News widget** (off by default – add it from *Widgets*): pick a region from ~50 Google News editions (or "my region"), combine subjects (Top stories, World, National, Local for any town, Business, Tech, Science, Health, Sports, Culture), add keywords, or add your own RSS/Atom feed. Headlines open in a new tab.
 
-**Optional cloud sync:** sign in with Google to save your look, music list, note and statistics to your own account and carry them between devices (stats are merged across devices, so no game is lost). Off by default – see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
+**Optional cloud sync:** sign in with Google to save your look, music list, note and statistics to your own account and carry them between devices (stats are merged across devices, so no game is lost). Off by default – see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) ([en français](docs/FIREBASE_SETUP.fr.md)).
 
 **Keys:** `Space` draw · `U` / `Ctrl+Z` undo · `H` hint · `F` finish · `N` new deal · `M` music · `Esc` close / deselect
 
