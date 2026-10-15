@@ -199,6 +199,13 @@
     /* keep the clock honest while hidden tabs sleep: persist on leave */
     window.addEventListener('pagehide', () => { g.saveNow(); });
 
+    /* keep --vvh = the visible height (shrinks when a phone keyboard is open) and undo any page pan after typing */
+    const vv = window.visualViewport;
+    const setVvh = () => document.documentElement.style.setProperty('--vvh', (vv ? vv.height : window.innerHeight) + 'px');
+    setVvh();
+    if (vv) vv.addEventListener('resize', setVvh);
+    document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) window.scrollTo(0, 0); }, 60));
+
     document.body.classList.add('ready');
   }
 

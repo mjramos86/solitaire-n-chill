@@ -335,7 +335,12 @@
       const u = this.ui;
       u.root = mount;
       u.input = h('input.mp-input', { type: 'text', placeholder: 'Paste a music link…', 'aria-label': 'Music link', spellcheck: false, autocomplete: 'off',
-        onkeydown: (e) => { if (e.key === 'Enter') this.submit(true); e.stopPropagation(); } });
+        onkeydown: (e) => { if (e.key === 'Enter') this.submit(true); e.stopPropagation(); },
+        onfocus: () => { clearTimeout(this._typingT); this.ui.root.classList.add('typing'); },
+        onblur: () => { // wait a beat: tapping Play / ✕ blurs the field first, and moving the panel now would make the tap miss
+          clearTimeout(this._typingT);
+          this._typingT = setTimeout(() => { if (document.activeElement !== this.ui.input) { this.ui.root.classList.remove('typing'); window.scrollTo(0, 0); } }, 350);
+        } });
       u.msg = h('div.mp-msg', { role: 'status' });
       u.embed = h('div.mp-embed');
       u.title = h('div.mp-now-title', null, 'Nothing playing');
