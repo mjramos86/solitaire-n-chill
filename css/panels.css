@@ -338,14 +338,21 @@ a.nw-item:hover { background: var(--hover); }
 @keyframes pulse { 50% { opacity: .35; } }
 .acct-list { margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
 .acct-list .dim { color: var(--muted); font-size: 12.5px; }
-#btn-account { position: relative; padding: 0 8px; min-width: 40px; }
+#btn-account { position: relative; padding: 0 14px 0 10px; min-width: 40px; }
+#btn-account .acct-lbl { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
+/* signed out: a clear call to action on every screen size, label always visible */
+#btn-account.guest { background: var(--accent); color: var(--on-accent); border-color: transparent; box-shadow: 0 4px 16px rgba(var(--accent-rgb), .4); }
+#btn-account.guest:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+#btn-account.guest .lbl { display: inline; }
+#btn-account:disabled { opacity: .7; cursor: default; }
 #btn-account .acct-ico { display: inline-grid; place-items: center; width: 24px; height: 24px; font-weight: 800; position: relative; }
 #btn-account.signed .acct-ico:not(:has(img)) { background: var(--accent); color: var(--on-accent); border-radius: 50%; font-size: 13px; }
 #btn-account .avatar { width: 24px; height: 24px; }
 .sdot { position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: #7fd8b0; border: 2px solid #20202c; }
 #btn-account[data-status="syncing"] .sdot { background: #ffd27a; }
 #btn-account[data-status="error"] .sdot, #btn-account[data-status="offline"] .sdot, #btn-account[data-status="paused"] .sdot { background: #ff8a7a; }
-@media (max-width: 520px) { #btn-account { display: none; } }
+/* signed in: avatar, plus the first name when there is room */
+@media (max-width: 980px) { #btn-account.signed { padding: 0 8px; } #btn-account.signed .lbl { display: none; } }
 @media (max-width: 760px) {
   .cz-tabs { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
   .gbtn { align-self: stretch; min-height: 48px; }

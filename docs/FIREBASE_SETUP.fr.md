@@ -74,7 +74,7 @@ window.SNC_FIREBASE = {
 };
 ```
 
-Après le déploiement GitHub Pages, un bouton 👤 apparaît dans la barre du haut et un onglet **Account** dans
+Après le déploiement GitHub Pages, un bouton **Login** apparaît dans la barre du haut (il devient votre avatar une fois connecté) et un onglet **Account** dans
 *Customize*.
 
 ## 7. Vérifier

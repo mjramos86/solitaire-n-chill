@@ -30,7 +30,8 @@ const status = (p) => p.evaluate(() => SNC.cloud.state.status);
   const A = await device(b, 'A');
   // --- 1. signed-out UI
   assert(await A.evaluate(() => !document.getElementById('btn-account').hidden), 'account button visible');
-  await A.click('#btn-account'); await A.waitForTimeout(400);
+  assert.strictEqual((await A.textContent('#btn-account .acct-lbl')).trim(), 'Login', 'button says Login');
+  await A.evaluate(() => SNC.customize.open('account')); await A.waitForTimeout(400);
   assert(await A.evaluate(() => !!document.querySelector('.gbtn')), 'google button shown');
   await A.keyboard.press('Escape');
   console.log('1 signed-out UI ok');
@@ -55,7 +56,8 @@ const status = (p) => p.evaluate(() => SNC.cloud.state.status);
 
   // --- 3. B fresh device signs in -> receives everything, no prompt
   const B = await device(b, 'B');
-  await B.evaluate(() => SNC.cloud.signIn()); await settle(B, 1200);
+  await B.click('#btn-account'); await settle(B, 1200); // the Login button itself signs in
+  assert.strictEqual((await B.textContent('#btn-account .acct-lbl')).trim(), 'Test', 'signed-in button shows the first name');
   assert(!(await B.evaluate(() => !!document.querySelector('.modal'))), 'no prompt for a clean device');
   assert.strictEqual(await B.evaluate(() => SNC.settings.data.look.bg.id), 'sakura');
   assert.strictEqual(await B.evaluate(() => SNC.settings.data.look.accent), '#ff8fb1');

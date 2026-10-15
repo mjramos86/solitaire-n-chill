@@ -61,7 +61,7 @@ window.SNC_FIREBASE = {
 };
 ```
 
-Commit and push; once GitHub Pages redeploys, a 👤 button appears in the top bar and an **Account** tab in
+Commit and push; once GitHub Pages redeploys, a **Login** button appears in the top bar (it becomes your avatar once signed in) and an **Account** tab in
 *Customize*.
 
 ## 7. Check it works

@@ -8,8 +8,8 @@
  *   meets an account that has different data.
  * - Statistics are merged (counters add up across devices, records keep the best value) so
  *   playing on two devices never loses games.
- * - The Firebase SDK is only downloaded when the site is configured AND the player signs in
- *   (or was signed in before); guests never contact Google.
+ * - The Firebase SDK is only downloaded when the site is configured (a moment after the page loads, so the
+ *   Login click can open Google's pop-up straight away); an unconfigured site never loads it.
  * - All Firebase calls sit behind a small `backend` object (init/onAuth/signIn/signOut/get/set/stats/del)
  *   so the sync logic can be tested with an in-memory fake (see tests/cloud.sync.test.js).
  */
@@ -242,7 +242,7 @@
   }
 
   /** The fake backend used by tests has the same shape; `get` must return `stats` as a JSON string like Firestore does. */
-  function ensureBackend() {
+  function ensureBackend(silent) {
     if (S.backend) return Promise.resolve(S.backend);
     if (!backendPromise) {
       backendPromise = (async () => {
@@ -251,7 +251,7 @@
         b.onAuth(onAuth);
         S.backend = b;
         return b;
-      })().catch((e) => { backendPromise = null; setStatus('error', friendly(e)); throw e; });
+      })().catch((e) => { backendPromise = null; if (!silent) setStatus('error', friendly(e)); throw e; });
     }
     return backendPromise;
   }
@@ -276,13 +276,18 @@
       NS.bus.on('stats', () => schedule(DEBOUNCE_MS));
       document.addEventListener('visibilitychange', () => { if (!document.hidden && S.user && Date.now() - S.lastSync > 60000) schedule(500); });
       window.addEventListener('online', () => { if (S.user) schedule(500); });
-      if (NS.store.get('cloud.wasSignedIn')) ensureBackend().catch(() => {});
+      // Load the SDK in the background: a pop-up is only allowed if it opens straight from the click, so the
+      // script must already be there when the player presses Login.
+      const preload = () => ensureBackend(true).catch(() => {});
+      if (NS.store.get('cloud.wasSignedIn')) preload();
+      else setTimeout(() => (window.requestIdleCallback ? window.requestIdleCallback(preload, { timeout: 4000 }) : preload()), 1200);
     },
 
     async signIn() {
       try {
         setStatus('connecting');
-        const b = await ensureBackend();
+        // when the SDK is already loaded this calls the pop-up in the same tick as the click (browsers require that)
+        const b = S.backend || await ensureBackend();
         await b.signIn();
         if (!S.user) setStatus('signedout');
       } catch (e) {

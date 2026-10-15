@@ -208,3 +208,11 @@ body.ready #app { opacity: 1; }
   .modal-head::before { display: none; }
   .modal-head h2, .modal-head .ico { margin-top: 0; }
 }
+
+/* narrow portrait phones: two tidy rows – controls, then a slim stats line */
+@media (max-width: 520px) and (orientation: portrait) {
+  .topbar { flex-wrap: wrap; row-gap: 4px; }
+  .tools { margin-left: auto; }
+  .mini-stats { order: 5; flex: 1 1 100%; margin: 0; padding: 0; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; font-size: 12px; color: var(--muted); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
+  .mini-stats[hidden] { display: none !important; }
+}

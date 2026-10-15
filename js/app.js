@@ -168,12 +168,16 @@
     if (NS.cloud && NS.cloud.configured) {
       const btn = $('#btn-account');
       btn.hidden = false;
-      btn.addEventListener('click', () => NS.customize.open('account'));
+      // signed out: the button signs in right away; signed in: it opens the account page
+      btn.addEventListener('click', () => { if (NS.cloud.state.user) NS.customize.open('account'); else NS.cloud.signIn(); });
       const paint = () => {
         const u = NS.cloud.state.user, st = NS.cloud.state.status;
         btn.classList.toggle('signed', !!u);
+        btn.classList.toggle('guest', !u);
         btn.dataset.status = st;
         btn.title = u ? 'Account – ' + (u.name || u.email) : 'Sign in to save your game';
+        btn.querySelector('.acct-lbl').textContent = u ? ((u.name || u.email || 'Account').split(' ')[0]) : (st === 'connecting' ? '…' : 'Login');
+        btn.disabled = st === 'connecting';
         const ico = btn.querySelector('.acct-ico');
         ico.innerHTML = '';
         if (u && u.photo) ico.append(h('img.avatar', { src: u.photo, alt: '', referrerpolicy: 'no-referrer' }));
