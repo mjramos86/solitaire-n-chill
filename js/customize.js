@@ -206,11 +206,18 @@
           h('button.btn.danger', { onclick: () => { if (confirm('Erase everything saved by this game in your browser (game, stats, settings, music list, notes)?')) { NS.store.clearAll(); location.reload(); } } }, 'Erase all data')))];
   }
 
-  const TABS = [['look', '🎨', 'Look', tabLook], ['game', '🂡', 'Game', tabGame], ['widgets', '🧩', 'Widgets', tabWidgets], ['sound', '🔊', 'Sound', tabSound], ['data', '💾', 'Data', tabData]];
+  function tabAccount() {
+    const box = h('div.acct');
+    NS.cloud.renderAccount(box);
+    return [section('Your account', box)];
+  }
+
+  const ALL_TABS = [['account', '☁️', 'Account', tabAccount], ['look', '🎨', 'Look', tabLook], ['game', '🂡', 'Game', tabGame], ['widgets', '🧩', 'Widgets', tabWidgets], ['sound', '🔊', 'Sound', tabSound], ['data', '💾', 'Data', tabData]];
   let lastTab = 'look';
 
   function open(tabId) {
-    let cur = tabId || lastTab;
+    const TABS = ALL_TABS.filter(t => t[0] !== 'account' || (NS.cloud && NS.cloud.configured));
+    let cur = TABS.some(t => t[0] === (tabId || lastTab)) ? (tabId || lastTab) : 'look';
     const content = h('div.cz-content');
     const tabs = h('div.cz-tabs', { role: 'tablist' });
     function renderTabs() {

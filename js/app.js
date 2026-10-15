@@ -164,6 +164,27 @@
 
     NS.bus.on('winscreen', showWin);
 
+    /* optional cloud account (only present once js/firebase-config.js has a config) */
+    if (NS.cloud && NS.cloud.configured) {
+      const btn = $('#btn-account');
+      btn.hidden = false;
+      btn.addEventListener('click', () => NS.customize.open('account'));
+      const paint = () => {
+        const u = NS.cloud.state.user, st = NS.cloud.state.status;
+        btn.classList.toggle('signed', !!u);
+        btn.dataset.status = st;
+        btn.title = u ? 'Account – ' + (u.name || u.email) : 'Sign in to save your game';
+        const ico = btn.querySelector('.acct-ico');
+        ico.innerHTML = '';
+        if (u && u.photo) ico.append(h('img.avatar', { src: u.photo, alt: '', referrerpolicy: 'no-referrer' }));
+        else ico.textContent = u ? (u.name || u.email || '?').slice(0, 1).toUpperCase() : '👤';
+        if (u) ico.append(h('span.sdot'));
+      };
+      NS.bus.on('cloud', paint);
+      paint();
+      NS.cloud.init();
+    }
+
     /* audio needs a gesture before it may start */
     const unlock = () => { NS.audio.resumeSaved(); document.removeEventListener('pointerdown', unlock, true); };
     document.addEventListener('pointerdown', unlock, true);

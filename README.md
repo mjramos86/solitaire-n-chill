@@ -23,7 +23,11 @@ Paste a link into the player (or just paste anywhere on the page) from **YouTube
 - Soft built-in ambience: rain, wind, fireplace.
 
 **Widgets** (left / right rails, or a drawer on small screens; arrange, hide and add them)
-Clock · Weather (Open-Meteo, no key) · This game · Focus timer (pomodoro) · Sticky note · Gentle words · Ambience mixer.
+Clock · Weather (Open-Meteo, no key) · **News** · This game · Focus timer (pomodoro) · Sticky note · Gentle words · Ambience mixer.
+
+**News widget** (off by default – add it from *Widgets*): pick a region from ~50 Google News editions (or "my region"), combine subjects (Top stories, World, National, Local for any town, Business, Tech, Science, Health, Sports, Culture), add keywords, or add your own RSS/Atom feed. Headlines open in a new tab.
+
+**Optional cloud sync:** sign in with Google to save your look, music list, note and statistics to your own account and carry them between devices (stats are merged across devices, so no game is lost). Off by default – see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) ([en français](docs/FIREBASE_SETUP.fr.md)).
 
 **Keys:** `Space` draw · `U` / `Ctrl+Z` undo · `H` hint · `F` finish · `N` new deal · `M` music · `Esc` close / deselect
 
@@ -42,6 +46,10 @@ Everything is static files (`index.html`, `css/`, `js/`, `assets/`) and uses rel
 - Radio streams must be `https://` to play on an `https://` page.
 - Titles are looked up through each service's public oEmbed endpoint when possible, and fall back to a plain label.
 
+## Notes on the news widget
+
+Google News RSS can't be read directly from a web page (no CORS), so feeds are fetched through public relay services – `rss2json`, then `allorigins`, then `corsproxy.io` – and the one that last worked is tried first. Those relays can see the region and subjects you choose; nothing else is sent, and there is no account or key. They are free services and can be rate-limited or go down, in which case the widget shows the last cached headlines (15-minute cache) or a retry button.
+
 ## How it's built
 
 Plain HTML/CSS/JS (no dependencies, no bundler).
@@ -52,10 +60,12 @@ Plain HTML/CSS/JS (no dependencies, no bundler).
 | `js/board.js` | Renders a state with one persistent element per card; pointer-event drag & drop, staggered glide animations, flips. |
 | `js/game.js` | Game controller: click logic, undo, timer, persistence, stats. |
 | `js/music.js` | Link parsing + YouTube / SoundCloud / audio / embed engines. |
+| `js/cloud.js` | Optional Google sign-in + Firestore sync (per-section newest-wins, merged statistics); `firebase/` holds the security rules. |
+| `js/news.js` | News widget: Google News editions / topics / keywords / custom feeds through CORS relays. |
 | `js/widgets.js`, `js/customize.js`, `js/themes.js`, `js/settings.js` | Widgets, the customise dialog, look catalogue, saved settings. |
 | `js/fx.js`, `js/audio.js` | Atmosphere particles + win cascade; card sounds, chimes, ambience synthesis. |
 
-Rules tests: `node tests/rules.test.js`.
+Rules tests: `node tests/rules.test.js`. Cloud-sync tests (two simulated devices against a fake backend; needs `npm i playwright`): `node tests/cloud.sync.test.js`.
 
 ### Credits
 Gameplay mechanics and the card-sound samples come from *The Solitaire Tower of Doom* (same author). Fonts: Nunito and Fraunces via Google Fonts (optional – falls back to system fonts). Weather: [Open-Meteo](https://open-meteo.com/).

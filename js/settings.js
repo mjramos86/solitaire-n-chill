@@ -35,11 +35,12 @@
     widgets: {
       left: ['clock', 'weather', 'quote'],
       right: ['stats', 'focus', 'note'],
-      hidden: ['ambience'],
+      hidden: ['news', 'ambience'],
       cfg: {
         clock: { h24: false, seconds: false, date: true },
         weather: { name: '', lat: null, lon: null, units: 'c' },
         focus: { focus: 25, short: 5, long: 15 },
+        news: { region: 'auto', topics: ['top'], place: '', query: '', custom: '', count: 8 },
       },
     },
   };
@@ -56,7 +57,7 @@
   let data = merge(copy(DEFAULTS), NS.store.get('settings', {}));
   // every widget id the app knows must live in exactly one list
   function normaliseWidgets() {
-    const all = ['clock', 'weather', 'quote', 'stats', 'focus', 'note', 'ambience'];
+    const all = ['clock', 'weather', 'quote', 'stats', 'focus', 'note', 'news', 'ambience'];
     const w = data.widgets;
     const seen = new Set();
     ['left', 'right', 'hidden'].forEach(k => { w[k] = (w[k] || []).filter(id => all.includes(id) && !seen.has(id) && seen.add(id)); });

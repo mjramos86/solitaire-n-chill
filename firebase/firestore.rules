@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Everything is closed unless a rule below opens it.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // One document per signed-in player: only that player can read, write or delete it.
+    match /snc_users/{uid} {
+      function mine() { return request.auth != null && request.auth.uid == uid; }
+      function okText(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() < max); }
+
+      allow read, delete: if mine();
+      allow create, update: if mine()
+        && request.resource.data.keys().hasOnly(['v', 't', 'settings', 'music', 'note', 'stats', 'updatedAt'])
+        && okText(request.resource.data, 'settings', 200000)
+        && okText(request.resource.data, 'music', 100000)
+        && okText(request.resource.data, 'note', 20000)
+        && okText(request.resource.data, 'stats', 5000)
+        && (!('t' in request.resource.data) || request.resource.data.t is map);
+    }
+  }
+}

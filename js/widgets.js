@@ -253,7 +253,8 @@
     const ta = h('textarea.note', { placeholder: 'A little note to self…', 'aria-label': 'Sticky note', rows: 5, maxLength: 2000, spellcheck: true,
       onkeydown: (e) => e.stopPropagation() });
     ta.value = NS.store.get('note', '');
-    ta.addEventListener('input', NS.debounce(() => NS.store.set('note', ta.value), 300));
+    ta.addEventListener('input', NS.debounce(() => { NS.store.set('note', ta.value); NS.bus.emit('note'); }, 300));
+    NS.bus.on('noteRemote', () => { ta.value = NS.store.get('note', ''); });
     body.append(ta);
     return { update() {} };
   }
@@ -311,6 +312,7 @@
     focus: { title: 'Focus timer', icon: '🍅', mount: mountFocus },
     note: { title: 'Sticky note', icon: '📝', mount: mountNote },
     quote: { title: 'Gentle words', icon: '🌱', mount: mountQuote },
+    news: { title: 'News', icon: '📰', mount: (body) => NS.newsWidget.mount(body) },
     ambience: { title: 'Ambience', icon: '🎧', mount: mountAmbience },
   };
 
