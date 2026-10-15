@@ -57,7 +57,7 @@
     /** opts: { seed, replay, daily, silent } */
     newGame(opts) {
       opts = opts || {};
-      if (this.started && !this.won) { this.stats.streak = 0; this.saveStats(); }
+      if (this.started && !this.won) { this.stats.streak = 0; this.saveStats(); NS.cloud && NS.cloud.noteStat('touch'); }
       const o = this.options();
       let seed;
       if (opts.replay && this.state) {
@@ -86,12 +86,12 @@
       NS.store.set('game', { v: 1, state: this.state, undo: this.undo.slice(-40), elapsed: this.elapsed, started: this.started, won: this.won });
     },
     save: NS.debounce(function () { Game.saveNow(); }, 250),
-    saveStats() { NS.store.set('stats', this.stats); },
+    saveStats() { NS.store.set('stats', this.stats); NS.bus.emit('stats'); },
 
     /* ------------------------------------------------------------ committing changes */
     commit(next, opts) {
       opts = opts || {};
-      if (!this.started) { this.started = true; this.stats.played++; this.saveStats(); }
+      if (!this.started) { this.started = true; this.stats.played++; this.saveStats(); NS.cloud && NS.cloud.noteStat('played'); }
       this.undo.push(this.state);
       if (this.undo.length > 300) this.undo.shift();
       this.state = next;
@@ -114,6 +114,7 @@
       if (!s.bestMoves || st.moves < s.bestMoves) s.bestMoves = st.moves;
       s.bestScore = Math.max(s.bestScore, st.score);
       this.saveStats();
+      NS.cloud && NS.cloud.noteStat('won');
       this.save();
       NS.audio.winChime();
       NS.bus.emit('win');

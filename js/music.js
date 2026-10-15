@@ -328,7 +328,23 @@
       document.addEventListener('paste', (e) => this.onGlobalPaste(e));
     },
 
-    save() { NS.store.set('music', { items: this.items.slice(0, 60), cur: this.cur, volume: this.volume, repeat: this.repeat }); },
+    save() { NS.store.set('music', { items: this.items.slice(0, 60), cur: this.cur, volume: this.volume, repeat: this.repeat }); NS.bus.emit('music'); },
+
+    /** Data pulled from the account: replace the list but never interrupt what is playing. */
+    applyRemote(d) {
+      const playing = this.engine ? this.items[this.cur] : null;
+      this.items = (d.items || []).filter(i => i && i.url && parseLink(i.url));
+      if (d.volume != null) this.volume = clamp(d.volume, 0, 100);
+      if (d.repeat) this.repeat = d.repeat;
+      if (playing) {
+        let idx = this.items.findIndex(i => i.url === playing.url);
+        if (idx < 0) { this.items.push(playing); idx = this.items.length - 1; }
+        this.cur = idx;
+      } else this.cur = this.items.length && d.cur >= 0 && d.cur < this.items.length ? d.cur : -1;
+      this.ui.vol.value = this.volume;
+      if (this.engine) this.engine.setVolume(this.volume);
+      this.renderQueue(); this.renderBar();
+    },
 
     /* ---------------------------------------------------------- UI */
     build(mount) {

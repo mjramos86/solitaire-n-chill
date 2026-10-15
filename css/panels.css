@@ -315,3 +315,38 @@ a.nw-item:hover { background: var(--hover); }
 .widget[data-w="news"] .seg button { padding: 5px 12px; }
 @media (max-width: 1179px) { .nw-list { max-height: none; } }
 @media (pointer: coarse) { .nw-item { padding: 11px 4px; } }
+
+/* ================================================================ account / cloud sync */
+.acct { display: flex; flex-direction: column; gap: 14px; }
+.gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; align-self: flex-start; min-height: 44px; padding: 0 20px 0 14px; border-radius: 999px; border: 1px solid #dadce0; background: #fff; color: #3c4043; font-weight: 700; font-size: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); transition: box-shadow .15s, transform .12s var(--ease); }
+.gbtn:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+.gbtn:active:not(:disabled) { transform: scale(.98); }
+.gbtn:disabled { opacity: .7; cursor: default; }
+.gmark { display: inline-grid; place-items: center; }
+.cz-note.fine { font-size: 12px; }
+.acct-card { display: flex; align-items: center; gap: 12px; }
+.acct-who { display: flex; flex-direction: column; min-width: 0; }
+.acct-who b { font-size: 15px; } .acct-who small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: block; }
+.avatar.big { width: 48px; height: 48px; flex: none; }
+.avatar.ph { display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: 20px; }
+.acct-status { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 5px 12px; border-radius: 999px; background: rgba(255, 255, 255, .07); font-size: 13px; font-weight: 700; }
+.acct-status .dot { width: 9px; height: 9px; border-radius: 50%; background: #7fd8b0; }
+.acct-status.syncing .dot, .acct-status.connecting .dot { background: #ffd27a; animation: pulse 1s ease-in-out infinite; }
+.acct-status.offline .dot, .acct-status.paused .dot { background: #ffb86b; }
+.acct-status.error .dot { background: #ff8a7a; }
+@keyframes pulse { 50% { opacity: .35; } }
+.acct-list { margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.acct-list .dim { color: var(--muted); font-size: 12.5px; }
+#btn-account { position: relative; padding: 0 8px; min-width: 40px; }
+#btn-account .acct-ico { display: inline-grid; place-items: center; width: 24px; height: 24px; font-weight: 800; position: relative; }
+#btn-account.signed .acct-ico:not(:has(img)) { background: var(--accent); color: var(--on-accent); border-radius: 50%; font-size: 13px; }
+#btn-account .avatar { width: 24px; height: 24px; }
+.sdot { position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: #7fd8b0; border: 2px solid #20202c; }
+#btn-account[data-status="syncing"] .sdot { background: #ffd27a; }
+#btn-account[data-status="error"] .sdot, #btn-account[data-status="offline"] .sdot, #btn-account[data-status="paused"] .sdot { background: #ff8a7a; }
+@media (max-width: 520px) { #btn-account { display: none; } }
+@media (max-width: 760px) {
+  .cz-tabs { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .gbtn { align-self: stretch; min-height: 48px; }
+}
