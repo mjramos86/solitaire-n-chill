@@ -4,9 +4,14 @@
  * See docs/FIREBASE_SETUP.md. These values are public identifiers, not secrets:
  * your data is protected by the Firestore security rules (firebase/firestore.rules).
  *
- * Leave it as `null` and the game works exactly as before (everything stays in the browser).
+ * Setting it to `null` switches cloud sync off again (everything then stays in the browser).
  */
-window.SNC_FIREBASE = null;
+window.SNC_FIREBASE = {
+  apiKey: "AIzaSyAb5BHj6lpdLIAB4UqO9eR-J3e6sBUONaY",
+  authDomain: "solitaire-n-chill.firebaseapp.com",
+  projectId: "solitaire-n-chill",
+  appId: "1:159133771209:web:40d0e0e652df9e050af418"
+};
 
 /* Example (replace with your own values from Firebase console → Project settings → Your apps):
 window.SNC_FIREBASE = {
