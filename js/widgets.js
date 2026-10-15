@@ -311,6 +311,7 @@
     focus: { title: 'Focus timer', icon: '🍅', mount: mountFocus },
     note: { title: 'Sticky note', icon: '📝', mount: mountNote },
     quote: { title: 'Gentle words', icon: '🌱', mount: mountQuote },
+    news: { title: 'News', icon: '📰', mount: (body) => NS.newsWidget.mount(body) },
     ambience: { title: 'Ambience', icon: '🎧', mount: mountAmbience },
   };
 
