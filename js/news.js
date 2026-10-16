@@ -14,7 +14,7 @@
   /* [code, label, hl, gl, ceid-language] – Google News "editions" */
   const REGIONS = [
     ['WORLD', '🌍 Worldwide (English)', 'en', 'US', 'en'],
-    ['US', 'United States', 'en-US', 'US', 'en'], ['GB', 'United Kingdom', 'en-GB', 'GB', 'en'], ['CA', 'Canada', 'en-CA', 'CA', 'en'],
+    ['US', 'United States', 'en-US', 'US', 'en'], ['GB', 'United Kingdom', 'en-GB', 'GB', 'en'], ['CA', 'Canada (English)', 'en-CA', 'CA', 'en'], ['CA-FR', 'Canada – Québec (français)', 'fr-CA', 'CA', 'fr'],
     ['AU', 'Australia', 'en-AU', 'AU', 'en'], ['NZ', 'New Zealand', 'en-NZ', 'NZ', 'en'], ['IE', 'Ireland', 'en-IE', 'IE', 'en'],
     ['IN', 'India', 'en-IN', 'IN', 'en'], ['SG', 'Singapore', 'en-SG', 'SG', 'en'], ['PH', 'Philippines', 'en-PH', 'PH', 'en'],
     ['MY', 'Malaysia', 'en-MY', 'MY', 'en'], ['ZA', 'South Africa', 'en-ZA', 'ZA', 'en'], ['NG', 'Nigeria', 'en-NG', 'NG', 'en'],
@@ -39,15 +39,24 @@
     ['health', 'Health', 'HEALTH'], ['sports', 'Sports', 'SPORTS'], ['entertainment', 'Culture', 'ENTERTAINMENT'],
   ];
 
-  const flag = (code) => /^[A-Z]{2}$/.test(code) ? String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : '🌍';
+  /* flag emoji from the country part of the code; Québec has no flag emoji, so it gets the fleur-de-lis */
+  const FLAG_OVERRIDE = { 'CA-FR': '⚜️' };
+  const flag = (code) => {
+    if (FLAG_OVERRIDE[code]) return FLAG_OVERRIDE[code];
+    const cc = String(code).slice(0, 2);
+    return /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : '🌍';
+  };
   const regionByCode = (c) => REGIONS.find(r => r[0] === c);
 
   /** 'auto' → the visitor's browser region if we have an edition for it, else Worldwide. */
   function autoRegion() {
     const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en-US']);
     for (const l of langs) {
-      const m = /-([A-Za-z]{2})$/.exec(l);
-      if (m && regionByCode(m[1].toUpperCase())) return m[1].toUpperCase();
+      const m = /^([A-Za-z]{2,3})-([A-Za-z]{2})$/.exec(l);
+      if (!m) continue;
+      const lang = m[1].toLowerCase(), cc = m[2].toUpperCase();
+      if (regionByCode(cc + '-' + lang.toUpperCase())) return cc + '-' + lang.toUpperCase(); // e.g. fr-CA -> CA-FR (Québec)
+      if (regionByCode(cc)) return cc;
     }
     return 'WORLD';
   }

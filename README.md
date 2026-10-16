@@ -25,7 +25,7 @@ Paste a link into the player (or just paste anywhere on the page) from **YouTube
 **Widgets** (left / right rails, or a drawer on small screens; arrange, hide and add them)
 Clock · Weather (Open-Meteo, no key) · **News** · This game · Focus timer (pomodoro) · Sticky note · Gentle words · Ambience mixer.
 
-**News widget** (off by default – add it from *Widgets*): pick a region from ~50 Google News editions (or "my region"), combine subjects (Top stories, World, National, Local for any town, Business, Tech, Science, Health, Sports, Culture), add keywords, or add your own RSS/Atom feed. Headlines open in a new tab.
+**News widget** (off by default – add it from *Widgets*): pick a region from ~50 Google News editions, including Canada in English and **Québec in French** (or "my region", which follows your browser language), combine subjects (Top stories, World, National, Local for any town, Business, Tech, Science, Health, Sports, Culture), add keywords, or add your own RSS/Atom feed. Headlines open in a new tab.
 
 **Optional cloud sync:** sign in with Google to save your look, music list, note and statistics to your own account and carry them between devices (stats are merged across devices, so no game is lost). Off by default – see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) ([en français](docs/FIREBASE_SETUP.fr.md)).
 
