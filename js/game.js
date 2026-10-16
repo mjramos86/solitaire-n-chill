@@ -132,7 +132,7 @@
     drawStock() {
       const r = K.draw(this.state);
       if (!r) {
-        if (this.state.stock.length === 0 && this.state.waste.length) NS.toast('No more passes through the deck – try undo, or start a new deal.');
+        if (this.state.stock.length === 0 && this.state.waste.length) NS.toast(NS.t('toast.noPasses'));
         return false;
       }
       this.commit(r.state);
@@ -141,7 +141,7 @@
 
     undoMove() {
       if (this.busy) { this.busy = false; }
-      if (!this.undo.length) { NS.toast('Nothing to undo'); return; }
+      if (!this.undo.length) { NS.toast(NS.t('toast.nothingUndo')); return; }
       this.state = this.undo.pop();
       this.won = false;
       this.hintIdx = 0;
@@ -164,13 +164,13 @@
       }
       if (this.state.stock.length || (this.state.waste.length && this.state.redealsLeft > 0)) {
         this.board.showHint({ draw: true });
-        NS.toast('No moves on the table – try the deck');
-      } else NS.toast('No moves left – undo a few steps, or start a fresh deal');
+        NS.toast(NS.t('toast.hintDeck'));
+      } else NS.toast(NS.t('toast.hintNone'));
     },
 
     autoFinish() {
       if (this.busy) { this.busy = false; return; }
-      if (!K.canAutoFinish(this.state)) { NS.toast('Reveal every card first, then I can finish for you'); return; }
+      if (!K.canAutoFinish(this.state)) { NS.toast(NS.t('toast.revealFirst')); return; }
       this.busy = true;
       let idle = 0;
       const stop = (msg) => { this.busy = false; if (msg) NS.toast(msg); NS.bus.emit('state'); };
@@ -186,7 +186,7 @@
           setTimeout(step, 90);
           return;
         }
-        stop('Almost there – the last few moves are yours');
+        stop(NS.t('toast.almost'));
       };
       NS.bus.emit('state');
       step();

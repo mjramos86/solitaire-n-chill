@@ -29,6 +29,8 @@ Clock · Weather (Open-Meteo, no key) · **News** · This game · Focus timer (p
 
 **Optional cloud sync:** sign in with Google to save your look, music list, note and statistics to your own account and carry them between devices (stats are merged across devices, so no game is lost). Off by default – see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) ([en français](docs/FIREBASE_SETUP.fr.md)).
 
+**Languages:** Français · English · Español (Latinoamérica) · Português (Brasil) · Deutsch · Русский. The game follows your browser language at first; change it any time with the 🌐 button (bottom right) or in *Customize → Game*. The choice is saved with your settings (and your account). To add a language, copy `js/lang/en.js`, translate the values, register it in `js/i18n.js` and `index.html`, then run `node tests/i18n.test.js`. The translations were written by an AI – native-speaker corrections are very welcome.
+
 **Keys:** `Space` draw · `U` / `Ctrl+Z` undo · `H` hint · `F` finish · `N` new deal · `M` music · `Esc` close / deselect
 
 ## Publish with GitHub Pages
@@ -62,10 +64,11 @@ Plain HTML/CSS/JS (no dependencies, no bundler).
 | `js/music.js` | Link parsing + YouTube / SoundCloud / audio / embed engines. |
 | `js/cloud.js` | Optional Google sign-in + Firestore sync (per-section newest-wins, merged statistics); `firebase/` holds the security rules. |
 | `js/news.js` | News widget: Google News editions / topics / keywords / custom feeds through CORS relays. |
+| `js/i18n.js`, `js/lang/*.js` | Translations (`NS.t('key', {params})`, plural forms, live language switch) – one flat dictionary per language. |
 | `js/widgets.js`, `js/customize.js`, `js/themes.js`, `js/settings.js` | Widgets, the customise dialog, look catalogue, saved settings. |
 | `js/fx.js`, `js/audio.js` | Atmosphere particles + win cascade; card sounds, chimes, ambience synthesis. |
 
-Rules tests: `node tests/rules.test.js`. Cloud-sync tests (two simulated devices against a fake backend; needs `npm i playwright`): `node tests/cloud.sync.test.js`.
+Rules tests: `node tests/rules.test.js`. Translation tests (same keys and `{placeholders}` in every language, every key used by the code exists): `node tests/i18n.test.js`. Cloud-sync tests (two simulated devices against a fake backend; needs `npm i playwright`): `node tests/cloud.sync.test.js`.
 
 ### Credits
 Gameplay mechanics and the card-sound samples come from *The Solitaire Tower of Doom* (same author). Fonts: Nunito and Fraunces via Google Fonts (optional – falls back to system fonts). Weather: [Open-Meteo](https://open-meteo.com/).

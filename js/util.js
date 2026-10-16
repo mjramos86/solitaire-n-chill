@@ -117,7 +117,7 @@
         URL.revokeObjectURL(url);
         resolve(c.toDataURL(file.type === 'image/png' && maxSide <= 600 ? 'image/png' : 'image/jpeg', quality));
       };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that image')); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
       img.src = url;
     });
   };

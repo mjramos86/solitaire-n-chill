@@ -4,6 +4,7 @@
   const NS = window.SNC;
 
   const DEFAULTS = {
+    lang: 'auto',          // 'auto' (follow the browser) | fr | en | es | pt | de | ru
     game: {
       drawCount: 1,        // 1 | 3
       winnable: true,      // retry shuffles until a simple solver can win them
@@ -37,7 +38,7 @@
       right: ['stats', 'focus', 'note'],
       hidden: ['news', 'ambience'],
       cfg: {
-        clock: { h24: false, seconds: false, date: true },
+        clock: { h24: null, seconds: false, date: true }, // h24 null = follow the language
         weather: { name: '', lat: null, lon: null, units: 'c' },
         focus: { focus: 25, short: 5, long: 15 },
         news: { region: 'auto', topics: ['top'], place: '', query: '', custom: '', count: 8 },

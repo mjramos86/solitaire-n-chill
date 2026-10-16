@@ -105,7 +105,7 @@ body.ready #app { opacity: 1; }
   .rail { display: flex; }
   .rail.empty { display: none; }
   body.arranging .rail.empty { display: flex; }
-  body.arranging .rail.empty::after { content: "Drop widgets here with ◀ ▶"; border: 2px dashed var(--glass-border); border-radius: var(--radius); padding: 24px 12px; text-align: center; color: var(--muted); font-size: 13px; }
+  body.arranging .rail.empty::after { content: attr(data-empty); border: 2px dashed var(--glass-border); border-radius: var(--radius); padding: 24px 12px; text-align: center; color: var(--muted); font-size: 13px; }
 }
 .board-wrap {
   position: relative; flex: 1 1 0; min-width: 0; min-height: 0; border-radius: 24px;
@@ -118,6 +118,12 @@ body.ready #app { opacity: 1; }
 
 /* ---------- dock (music) ---------- */
 .dock { display: flex; align-items: center; gap: 12px; padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); min-height: 62px; }
+.lang-btn { margin-left: auto; flex: none; height: 44px; padding: 0 14px; border-radius: 999px; gap: 6px; }
+.lang-btn .ico-l { font-size: 15px; }
+.lang-code { font-weight: 800; font-size: 12.5px; letter-spacing: .06em; }
+.menu.up { animation-name: popUp; }
+@keyframes popUp { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+.menu .menu-native { font-weight: 700; }
 
 /* ---------- popup menu ---------- */
 .menu {

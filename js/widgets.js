@@ -3,12 +3,23 @@
   'use strict';
   const NS = window.SNC;
   const { h, clamp, pad2 } = NS;
+  const t = (...a) => NS.t(...a);
 
   const cfgOf = (id) => NS.settings.data.widgets.cfg[id] || (NS.settings.data.widgets.cfg[id] = {});
   const setCfg = (id, partial) => { NS.settings.set('widgets.cfg.' + id, Object.assign({}, cfgOf(id), partial)); };
   const chip = (label, active, onclick, title) => h('button.chip' + (active ? '.on' : ''), { onclick, title, 'aria-pressed': String(!!active) }, label);
 
   /* ================================================================ clock */
+  /* "AM"/"PM" as the current language writes it */
+  function ampm(d) {
+    try { const p = new Intl.DateTimeFormat(NS.i18n.locale(), { hour: 'numeric', hour12: true }).formatToParts(d).find(x => x.type === 'dayPeriod'); if (p) return p.value; } catch (e) { /* fall through */ }
+    return d.getHours() >= 12 ? 'PM' : 'AM';
+  }
+  /** 24-hour clock? an explicit choice wins, otherwise follow the language (English = 12 h) */
+  function is24(c) {
+    if (typeof c.h24 === 'boolean') return c.h24;
+    try { return !new Intl.DateTimeFormat(NS.i18n.locale(), { hour: 'numeric' }).resolvedOptions().hour12; } catch (e) { return false; }
+  }
   function mountClock(body) {
     const time = h('div.clk-time');
     const date = h('div.clk-date');
@@ -19,69 +30,73 @@
       const c = cfgOf('clock');
       opts.innerHTML = '';
       opts.append(
-        chip('24h', c.h24, () => { setCfg('clock', { h24: !cfgOf('clock').h24 }); renderOpts(); update(); }),
-        chip('sec', c.seconds, () => { setCfg('clock', { seconds: !cfgOf('clock').seconds }); renderOpts(); update(); }),
-        chip('date', c.date, () => { setCfg('clock', { date: !cfgOf('clock').date }); renderOpts(); update(); }));
+        chip(t('clk.24h'), is24(c), () => { setCfg('clock', { h24: !is24(cfgOf('clock')) }); renderOpts(); update(); }),
+        chip(t('clk.sec'), c.seconds, () => { setCfg('clock', { seconds: !cfgOf('clock').seconds }); renderOpts(); update(); }),
+        chip(t('clk.date'), c.date, () => { setCfg('clock', { date: !cfgOf('clock').date }); renderOpts(); update(); }));
     }
     function update() {
       const c = cfgOf('clock'), d = new Date();
       let hh = d.getHours();
-      const suffix = hh >= 12 ? 'PM' : 'AM';
-      if (!c.h24) hh = hh % 12 || 12;
+      const suffix = ampm(d);
+      const h24 = is24(c);
+      if (!h24) hh = hh % 12 || 12;
       time.innerHTML = '';
-      time.append(`${c.h24 ? pad2(hh) : hh}:${pad2(d.getMinutes())}`);
+      time.append(`${h24 ? pad2(hh) : hh}:${pad2(d.getMinutes())}`);
       if (c.seconds) time.append(h('span.clk-sec', null, ':' + pad2(d.getSeconds())));
-      if (!c.h24) time.append(h('span.clk-ampm', null, suffix));
-      date.textContent = c.date ? d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : '';
+      if (!h24) time.append(h('span.clk-ampm', null, suffix));
+      date.textContent = c.date ? d.toLocaleDateString(NS.i18n.locale(), { weekday: 'long', month: 'long', day: 'numeric' }) : '';
       date.style.display = c.date ? '' : 'none';
       const hr = d.getHours();
-      greet.textContent = hr < 5 ? 'Still up? Cosy night' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : hr < 22 ? 'Good evening' : 'Cosy night';
+      greet.textContent = t(hr < 5 ? 'greet.late' : hr < 12 ? 'greet.morning' : hr < 18 ? 'greet.afternoon' : hr < 22 ? 'greet.evening' : 'greet.night');
     }
     renderOpts(); update();
     setInterval(update, 1000);
-    return { update };
+    return { update, relang() { renderOpts(); update(); } };
   }
 
   /* ================================================================ weather */
   const WX = (code, day) => {
-    if (code === 0) return day ? ['☀️', 'Clear'] : ['🌙', 'Clear'];
-    if (code === 1) return day ? ['🌤️', 'Mostly clear'] : ['🌙', 'Mostly clear'];
-    if (code === 2) return ['⛅', 'Partly cloudy'];
-    if (code === 3) return ['☁️', 'Overcast'];
-    if (code === 45 || code === 48) return ['🌫️', 'Foggy'];
-    if (code >= 51 && code <= 57) return ['🌦️', 'Drizzle'];
-    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['🌧️', 'Rain'];
-    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['❄️', 'Snow'];
-    if (code >= 95) return ['⛈️', 'Thunderstorm'];
-    return ['🌡️', 'Weather'];
+    if (code === 0) return day ? ['☀️', 'clear'] : ['🌙', 'clear'];
+    if (code === 1) return day ? ['🌤️', 'mostlyClear'] : ['🌙', 'mostlyClear'];
+    if (code === 2) return ['⛅', 'partlyCloudy'];
+    if (code === 3) return ['☁️', 'overcast'];
+    if (code === 45 || code === 48) return ['🌫️', 'fog'];
+    if (code >= 51 && code <= 57) return ['🌦️', 'drizzle'];
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['🌧️', 'rain'];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['❄️', 'snow'];
+    if (code >= 95) return ['⛈️', 'thunder'];
+    return ['🌡️', 'other'];
   };
 
   function mountWeather(body) {
     const view = h('div.wx');
     body.append(view);
-    let loading = false;
+    let loading = false, redraw = null; // redraw = repaint whatever is on screen (used when the language changes)
+    const GEO = '@geo'; // stored instead of a translated "Your location"
+    const placeName = (c) => (!c.name ? t('wx.somewhere') : (c.name === GEO || c.name === 'Your location') ? t('wx.yourLocation') : c.name);
 
-    function setupUI(msg) {
+    function setupUI(msgKey) {
+      redraw = () => setupUI(msgKey);
       view.innerHTML = '';
-      const input = h('input.text', { type: 'text', placeholder: 'Your city…', 'aria-label': 'City name', onkeydown: (e) => { if (e.key === 'Enter') search(); e.stopPropagation(); } });
+      const input = h('input.text', { type: 'text', placeholder: t('wx.cityPh'), 'aria-label': t('wx.cityAria'), onkeydown: (e) => { if (e.key === 'Enter') search(); e.stopPropagation(); } });
       const results = h('div.wx-results');
-      const info = h('div.w-note', null, msg || 'Weather comes from Open-Meteo (no account, no tracking).');
+      const info = h('div.w-note', null, t(msgKey || 'wx.note'));
       async function search() {
         const q = input.value.trim();
         if (!q) return;
-        results.textContent = 'Searching…';
+        results.textContent = t('wx.searching');
         try {
-          const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
+          const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=${NS.i18n.current()}&format=json`);
           const j = await r.json();
           results.innerHTML = '';
-          if (!j.results || !j.results.length) { results.textContent = 'No places found – try another spelling.'; return; }
+          if (!j.results || !j.results.length) { results.textContent = t('wx.noPlaces'); return; }
           j.results.forEach(p => results.append(h('button.wx-hit', { onclick: () => choose(p.name + (p.admin1 && p.admin1 !== p.name ? ', ' + p.admin1 : '') + (p.country_code ? ' · ' + p.country_code : ''), p.latitude, p.longitude) },
             h('b', null, p.name), ' ', h('span', null, [p.admin1, p.country].filter(Boolean).join(', ')))));
-        } catch (e) { results.textContent = 'Couldn’t reach the weather service – are you online?'; }
+        } catch (e) { results.textContent = t('wx.unreachable'); }
       }
       view.append(
-        h('div.wx-row', null, input, h('button.btn', { onclick: search }, 'Search')),
-        h('button.btn.wide', { onclick: locate }, '📍 Use my location'), results, info);
+        h('div.wx-row', null, input, h('button.btn', { onclick: search }, t('wx.search'))),
+        h('button.btn.wide', { onclick: locate }, t('wx.locate')), results, info);
     }
 
     function choose(name, lat, lon) {
@@ -90,11 +105,11 @@
       refresh(true);
     }
     function locate() {
-      if (!navigator.geolocation) { setupUI('Your browser can’t share a location – search for a city instead.'); return; }
-      view.textContent = 'Asking your browser for permission…';
+      if (!navigator.geolocation) { setupUI('wx.noGeo'); return; }
+      redraw = null; view.textContent = t('wx.asking');
       navigator.geolocation.getCurrentPosition(
-        (pos) => choose('Your location', +pos.coords.latitude.toFixed(3), +pos.coords.longitude.toFixed(3)),
-        () => setupUI('Location was declined – search for a city instead.'),
+        (pos) => choose(GEO, +pos.coords.latitude.toFixed(3), +pos.coords.longitude.toFixed(3)),
+        () => setupUI('wx.declined'),
         { timeout: 10000, maximumAge: 600000 });
     }
 
@@ -106,7 +121,7 @@
       const cache = NS.store.get('weather.cache', null);
       if (!force && cache && cache.key === key && Date.now() - cache.t < 15 * 60 * 1000) { show(cache.data); return; }
       loading = true;
-      if (!view.querySelector('.wx-main')) view.textContent = 'Checking the sky…';
+      if (!view.querySelector('.wx-main')) { redraw = null; view.textContent = t('wx.checking'); }
       try {
         const f = c.units === 'f';
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1&temperature_unit=${f ? 'fahrenheit' : 'celsius'}&wind_speed_unit=${f ? 'mph' : 'kmh'}`;
@@ -118,34 +133,41 @@
         show(data);
       } catch (e) {
         if (cache && cache.key === key) show(cache.data, true);
-        else { view.innerHTML = ''; view.append(h('div.w-note', null, 'Couldn’t load the weather right now.'), h('button.btn', { onclick: () => refresh(true) }, 'Try again'), h('button.btn', { onclick: () => setupUI() }, 'Change place')); }
+        else { redraw = failUI; failUI(); }
       } finally { loading = false; }
     }
 
+    function failUI() {
+      view.innerHTML = '';
+      view.append(h('div.w-note', null, t('wx.fail')), h('button.btn', { onclick: () => refresh(true) }, t('btn.tryAgain')), h('button.btn', { onclick: () => setupUI() }, t('wx.change')));
+    }
+
     function show(data, stale) {
+      redraw = () => show(data, stale);
       const c = cfgOf('weather');
       const cur = data.cur, day = !!cur.is_day;
-      const [emoji, label] = WX(cur.weather_code, day);
+      const [emoji, wxKey] = WX(cur.weather_code, day);
+      const label = t('wx.' + wxKey);
       const u = data.f ? '°F' : '°C';
       view.innerHTML = '';
       view.append(...[
         h('div.wx-main', null, h('span.wx-emoji', null, emoji), h('div', null, h('div.wx-temp', null, Math.round(cur.temperature_2m) + u), h('div.wx-desc', null, label))),
         h('div.wx-meta', null,
-          h('span', { title: 'Feels like' }, 'Feels ' + Math.round(cur.apparent_temperature) + '°'),
-          h('span', { title: 'Today' }, `↑${Math.round(data.hi)}° ↓${Math.round(data.lo)}°`),
-          h('span', { title: 'Wind' }, '💨 ' + Math.round(cur.wind_speed_10m) + (data.f ? ' mph' : ' km/h'))),
-        h('div.wx-place', null, h('span.wx-name', null, c.name || 'Somewhere nice'),
+          h('span', { title: t('wx.feelsTitle') }, t('wx.feels', { t: Math.round(cur.apparent_temperature) })),
+          h('span', { title: t('wx.today') }, `↑${Math.round(data.hi)}° ↓${Math.round(data.lo)}°`),
+          h('span', { title: t('wx.wind') }, '💨 ' + Math.round(cur.wind_speed_10m) + (data.f ? ' mph' : ' km/h'))),
+        h('div.wx-place', null, h('span.wx-name', null, placeName(c)),
           h('span.wx-tools', null,
-            h('button.ico.small', { title: 'Switch °C / °F', 'aria-label': 'Switch units', onclick: () => { setCfg('weather', { units: c.units === 'f' ? 'c' : 'f' }); refresh(true); } }, u === '°C' ? '°F' : '°C'),
-            h('button.ico.small', { title: 'Refresh', 'aria-label': 'Refresh weather', onclick: () => refresh(true) }, '↻'),
-            h('button.ico.small', { title: 'Change place', 'aria-label': 'Change place', onclick: () => setupUI() }, '✎'))),
-        stale ? h('div.w-note', null, 'Offline – showing the last reading.') : null].filter(Boolean));
+            h('button.ico.small', { title: t('wx.units'), 'aria-label': t('wx.unitsAria'), onclick: () => { setCfg('weather', { units: c.units === 'f' ? 'c' : 'f' }); refresh(true); } }, u === '°C' ? '°F' : '°C'),
+            h('button.ico.small', { title: t('tip.refresh'), 'aria-label': t('wx.refreshAria'), onclick: () => refresh(true) }, '↻'),
+            h('button.ico.small', { title: t('wx.change'), 'aria-label': t('wx.change'), onclick: () => setupUI() }, '✎'))),
+        stale ? h('div.w-note', null, t('wx.stale')) : null].filter(Boolean));
       NS.bus.emit('weather', { code: cur.weather_code, day });
     }
 
     refresh(false);
     setInterval(() => refresh(false), 5 * 60 * 1000);
-    return { update() {} };
+    return { update() {}, relang() { if (redraw) redraw(); } };
   }
 
   /* ================================================================ stats */
@@ -161,28 +183,28 @@
       const g = NS.game, st = g.state;
       if (!st) return;
       const zen = NS.settings.data.game.zen;
-      deal.textContent = st.daily ? `Daily deal · ${st.drawCount === 3 ? 'draw 3' : 'draw 1'}` : `Deal #${st.seed} · ${st.drawCount === 3 ? 'draw 3' : 'draw 1'}`;
+      deal.textContent = st.daily ? t('st.daily', { n: st.drawCount === 3 ? 3 : 1 }) : t('st.deal', { seed: st.seed, n: st.drawCount === 3 ? 3 : 1 });
       grid.innerHTML = '';
       if (zen) {
-        grid.append(h('div.w-note.zen', null, 'Zen mode – no numbers, just cards 🍃'));
+        grid.append(h('div.w-note.zen', null, t('st.zen')));
         bar.style.display = 'none'; barLabel.textContent = ''; streak.textContent = '';
         return;
       }
-      grid.append(cell('moves', st.moves), cell('time', NS.fmtTime(g.elapsed)), cell('score', st.score));
+      grid.append(cell(t('stat.moves'), st.moves), cell(t('stat.time'), NS.fmtTime(g.elapsed)), cell(t('stat.score'), st.score));
       bar.style.display = '';
       bar.firstChild.style.width = Math.round(st.score / NS.K.TOTAL_PTS * 100) + '%';
       barLabel.textContent = `${st.score} / ${NS.K.TOTAL_PTS}`;
       const s = g.stats;
-      streak.textContent = s.played ? `${s.won} won of ${s.played} · streak ${s.streak}` : 'First game of the day?';
+      streak.textContent = s.played ? t('st.line', { won: s.won, played: s.played, streak: s.streak }) : t('st.first');
     }
     NS.bus.on('state', update); NS.bus.on('tick', update); NS.bus.on('settings', (p) => { if (p === '*' || p === 'game.zen') update(); });
     update();
-    return { update };
+    return { update, relang: update };
   }
 
   /* ================================================================ focus timer */
   function mountFocus(body) {
-    const MODES = { focus: 'Focus', short: 'Break', long: 'Long break' };
+    const MODES = { focus: 'fc.focus', short: 'fc.break', long: 'fc.long' };
     let mode = 'focus', remaining = cfgOf('focus').focus * 60, endAt = 0, timer = 0, done = 0;
     const R = 34, C = 2 * Math.PI * R;
     const SVGNS = 'http://www.w3.org/2000/svg';
@@ -200,8 +222,8 @@
     const readout = h('div.fc-read');
     const dial = h('div.fc-dial', null, svg, readout);
     const modes = h('div.fc-modes');
-    const startBtn = h('button.btn.primary', { onclick: () => toggle() }, 'Start');
-    const resetBtn = h('button.btn', { onclick: () => reset() }, 'Reset');
+    const startBtn = h('button.btn.primary', { onclick: () => toggle() }, t('fc.start'));
+    const resetBtn = h('button.btn', { onclick: () => reset() }, t('fc.reset'));
     const count = h('div.w-note');
     body.append(dial, modes, h('div.fc-btns', null, startBtn, resetBtn), count);
 
@@ -210,10 +232,11 @@
       const m = Math.floor(remaining / 60), s = remaining % 60;
       readout.textContent = `${pad2(m)}:${pad2(s)}`;
       ringEl.setAttribute('stroke-dashoffset', String(C * (1 - remaining / total())));
-      startBtn.textContent = timer ? 'Pause' : (remaining < total() ? 'Resume' : 'Start');
-      count.textContent = done ? `${done} focus session${done > 1 ? 's' : ''} done today 🍅` : 'Small steps. Deal a hand, take a break.';
+      startBtn.textContent = t(timer ? 'fc.pause' : (remaining < total() ? 'fc.resume' : 'fc.start'));
+      resetBtn.textContent = t('fc.reset');
+      count.textContent = done ? t('fc.done', { n: done }) : t('fc.idle');
       modes.innerHTML = '';
-      Object.keys(MODES).forEach(k => modes.append(chip(MODES[k], k === mode, () => setMode(k))));
+      Object.keys(MODES).forEach(k => modes.append(chip(t(MODES[k]), k === mode, () => setMode(k))));
     }
     function setMode(k) { stop(); mode = k; remaining = total(); draw(); }
     function stop() { clearInterval(timer); timer = 0; }
@@ -229,8 +252,8 @@
       if (remaining <= 0) {
         stop();
         NS.audio.doneChime();
-        if (mode === 'focus') { done++; NS.toast('Focus session complete – time for a little break 🌿', 5000); mode = done % 4 === 0 ? 'long' : 'short'; }
-        else { NS.toast('Break over – ready when you are ☕', 5000); mode = 'focus'; }
+        if (mode === 'focus') { done++; NS.toast(t('toast.focusDone'), 5000); mode = done % 4 === 0 ? 'long' : 'short'; }
+        else { NS.toast(t('toast.breakOver'), 5000); mode = 'focus'; }
         remaining = total();
       }
       draw();
@@ -240,84 +263,81 @@
     draw();
     // durations
     const dur = h('div.fc-dur');
-    ['focus', 'short', 'long'].forEach(k => {
-      dur.append(h('label', null, MODES[k], h('input.num', { type: 'number', min: 1, max: 180, value: cfgOf('focus')[k], 'aria-label': MODES[k] + ' minutes',
-        onchange: (e) => { setCfg('focus', { [k]: clamp(parseInt(e.target.value, 10) || 1, 1, 180) }); }, onkeydown: (e) => e.stopPropagation() })));
-    });
-    body.append(h('details.fc-set', null, h('summary', null, 'Durations (min)'), dur));
-    return { update() {} };
+    const durTitle = h('summary');
+    function renderDur() {
+      dur.innerHTML = '';
+      durTitle.textContent = t('fc.durations');
+      ['focus', 'short', 'long'].forEach(k => {
+        dur.append(h('label', null, t(MODES[k]), h('input.num', { type: 'number', min: 1, max: 180, value: cfgOf('focus')[k], 'aria-label': t('fc.minutesAria', { mode: t(MODES[k]) }),
+          onchange: (e) => { setCfg('focus', { [k]: clamp(parseInt(e.target.value, 10) || 1, 1, 180) }); }, onkeydown: (e) => e.stopPropagation() })));
+      });
+    }
+    renderDur();
+    body.append(h('details.fc-set', null, durTitle, dur));
+    return { update() {}, relang() { draw(); renderDur(); } };
   }
 
   /* ================================================================ note */
   function mountNote(body) {
-    const ta = h('textarea.note', { placeholder: 'A little note to self…', 'aria-label': 'Sticky note', rows: 5, maxLength: 2000, spellcheck: true,
+    const ta = h('textarea.note', { placeholder: t('note.ph'), 'aria-label': t('note.aria'), rows: 5, maxLength: 2000, spellcheck: true,
       onkeydown: (e) => e.stopPropagation() });
     ta.value = NS.store.get('note', '');
     ta.addEventListener('input', NS.debounce(() => { NS.store.set('note', ta.value); NS.bus.emit('note'); }, 300));
     NS.bus.on('noteRemote', () => { ta.value = NS.store.get('note', ''); });
     body.append(ta);
-    return { update() {} };
+    return { update() {}, relang() { ta.placeholder = t('note.ph'); ta.setAttribute('aria-label', t('note.aria')); } };
   }
 
   /* ================================================================ quote */
-  const QUOTES = [
-    'Nothing has to be perfect. A good hand is enough.',
-    'Breathe in, deal out.',
-    'The next card is just a card. You are doing fine.',
-    'Tea is still warm. There is no rush.',
-    'Little by little, the whole pile comes undone.',
-    'Be gentle with yourself – even Aces start at the bottom.',
-    'Not every game needs to be won to be enjoyed.',
-    'Rain on the window, cards on the table. Good.',
-    'You can always undo. Life is a bit trickier, so be kind.',
-    'Slow is a perfectly good speed.',
-    'A quiet minute is a small victory.',
-    'Shuffle the day. Start again whenever you like.',
-    'Comfort is a deck of cards and a soft light.',
-    'Some days you stack kings. Some days you stack patience.',
-    'Stretch your shoulders. Unclench your jaw. Carry on.',
-    'There is always one more move you have not seen yet.',
-  ];
+  const QUOTE_COUNT = 16; // q.0 … q.15 in the language files
   function mountQuote(body) {
     const text = h('blockquote.q');
     const day = Math.floor(Date.now() / 86400000);
-    let i = day % QUOTES.length;
-    const next = h('button.ico.small.q-next', { title: 'Another one', 'aria-label': 'Show another quote', onclick: () => { i = (i + 1) % QUOTES.length; draw(); } }, '↻');
-    function draw() { text.textContent = '“' + QUOTES[i] + '”'; }
+    let i = day % QUOTE_COUNT;
+    const next = h('button.ico.small.q-next', { title: t('q.another'), 'aria-label': t('q.anotherAria'), onclick: () => { i = (i + 1) % QUOTE_COUNT; draw(); } }, '↻');
+    function draw() { text.textContent = '“' + t('q.' + i) + '”'; next.title = t('q.another'); next.setAttribute('aria-label', t('q.anotherAria')); }
     draw();
     body.append(text, next);
-    return { update() {} };
+    return { update() {}, relang: draw };
   }
 
   /* ================================================================ ambience mixer */
   function mountAmbience(body) {
-    const rows = [['rain', '🌧️', 'Rain'], ['wind', '💨', 'Wind'], ['fire', '🔥', 'Fireplace']];
-    const sl = {};
-    rows.forEach(([key, emoji, label]) => {
-      const input = h('input.range', { type: 'range', min: 0, max: 100, value: Math.round((NS.settings.data.sound.ambience[key] || 0) * 100), 'aria-label': label + ' volume',
+    const rows = [['rain', '🌧️'], ['wind', '💨'], ['fire', '🔥']];
+    const sl = {}, labels = {};
+    rows.forEach(([key, emoji]) => {
+      const input = h('input.range', { type: 'range', min: 0, max: 100, value: Math.round((NS.settings.data.sound.ambience[key] || 0) * 100),
         oninput: (e) => NS.audio.setAmbience(key, e.target.value / 100) });
       sl[key] = input;
-      body.append(h('label.amb-row', null, h('span.amb-ico', null, emoji), h('span.amb-label', null, label), input));
+      labels[key] = h('span.amb-label');
+      body.append(h('label.amb-row', null, h('span.amb-ico', null, emoji), labels[key], input));
     });
-    body.append(h('div.w-note', null, 'Soft sounds generated right here – no downloads.'));
+    const note = h('div.w-note');
+    body.append(note);
+    const relang = () => {
+      rows.forEach(([k]) => { labels[k].textContent = t('amb.' + k); sl[k].setAttribute('aria-label', t('amb.volumeAria', { label: t('amb.' + k) })); });
+      note.textContent = t('amb.note');
+    };
+    relang();
     NS.bus.on('settings', (p) => { if (p === '*') rows.forEach(([k]) => { sl[k].value = Math.round((NS.settings.data.sound.ambience[k] || 0) * 100); }); });
-    return { update() {} };
+    return { update() {}, relang };
   }
 
   /* ================================================================ registry + layout */
   const REGISTRY = {
-    clock: { title: 'Clock', icon: '🕰️', mount: mountClock },
-    weather: { title: 'Weather', icon: '🌤️', mount: mountWeather },
-    stats: { title: 'This game', icon: '🂡', mount: mountStats },
-    focus: { title: 'Focus timer', icon: '🍅', mount: mountFocus },
-    note: { title: 'Sticky note', icon: '📝', mount: mountNote },
-    quote: { title: 'Gentle words', icon: '🌱', mount: mountQuote },
-    news: { title: 'News', icon: '📰', mount: (body) => NS.newsWidget.mount(body) },
-    ambience: { title: 'Ambience', icon: '🎧', mount: mountAmbience },
+    clock: { icon: '🕰️', mount: mountClock },
+    weather: { icon: '🌤️', mount: mountWeather },
+    stats: { icon: '🂡', mount: mountStats },
+    focus: { icon: '🍅', mount: mountFocus },
+    note: { icon: '📝', mount: mountNote },
+    quote: { icon: '🌱', mount: mountQuote },
+    news: { icon: '📰', mount: (body) => NS.newsWidget.mount(body) },
+    ambience: { icon: '🎧', mount: mountAmbience },
   };
 
   const Widgets = {
     nodes: {},
+    api: {},
     edit: false,
     REGISTRY,
 
@@ -325,22 +345,38 @@
       this.els = els; // { left, right, drawer, drawerList, tray }
       Object.keys(REGISTRY).forEach(id => {
         const def = REGISTRY[id];
+        const btn = (act, glyph, run) => h('button.ico.small', { dataset: { act }, onclick: run }, glyph);
         const tools = h('div.w-tools', null,
-          h('button.ico.small', { title: 'Move to left', 'aria-label': 'Move ' + def.title + ' left', onclick: () => this.move(id, 'left') }, '◀'),
-          h('button.ico.small', { title: 'Move up', 'aria-label': 'Move up', onclick: () => this.shift(id, -1) }, '▲'),
-          h('button.ico.small', { title: 'Move down', 'aria-label': 'Move down', onclick: () => this.shift(id, 1) }, '▼'),
-          h('button.ico.small', { title: 'Move to right', 'aria-label': 'Move ' + def.title + ' right', onclick: () => this.move(id, 'right') }, '▶'),
-          h('button.ico.small', { title: 'Hide', 'aria-label': 'Hide ' + def.title, onclick: () => this.hide(id) }, '✕'));
+          btn('left', '◀', () => this.move(id, 'left')), btn('up', '▲', () => this.shift(id, -1)), btn('down', '▼', () => this.shift(id, 1)),
+          btn('right', '▶', () => this.move(id, 'right')), btn('hide', '✕', () => this.hide(id)));
         const body = h('div.w-body');
         const node = h('section.widget', { dataset: { w: id } },
-          h('header.w-head', null, h('span.w-icon', null, def.icon), h('span.w-title', null, def.title), tools), body);
-        def.mount(body);
+          h('header.w-head', null, h('span.w-icon', null, def.icon), h('span.w-title'), tools), body);
         this.nodes[id] = node;
+        this.api[id] = def.mount(body) || {};
+      });
+      this.relabel();
+      NS.bus.on('lang', () => {
+        this.relabel();
+        Object.values(this.api).forEach(a => { if (a && a.relang) a.relang(); });
+        this.renderTray();
       });
       const mq = window.matchMedia('(min-width: 1180px)');
       (mq.addEventListener ? mq.addEventListener('change', () => this.place()) : mq.addListener(() => this.place()));
       NS.bus.on('settings', (p) => { if (p === '*') this.place(); });
       this.place();
+    },
+
+    /** titles and tooltips of every widget frame, in the current language */
+    relabel() {
+      Object.keys(REGISTRY).forEach(id => {
+        const node = this.nodes[id], name = t('w.' + id);
+        node.querySelector('.w-title').textContent = name;
+        const set = (act, title, aria) => { const b = node.querySelector(`[data-act="${act}"]`); b.title = title; b.setAttribute('aria-label', aria || title); };
+        set('left', t('w.moveLeft'), t('w.moveLeftAria', { w: name })); set('up', t('w.up')); set('down', t('w.down'));
+        set('right', t('w.moveRight'), t('w.moveRightAria', { w: name })); set('hide', t('w.hide'), t('w.hideAria', { w: name }));
+      });
+      this.els.left.dataset.empty = this.els.right.dataset.empty = t('tray.drop');
     },
 
     wide() { return window.matchMedia('(min-width: 1180px)').matches; },
@@ -365,12 +401,12 @@
     renderTray() {
       const t = this.els.tray, w = NS.settings.data.widgets;
       t.innerHTML = '';
-      t.append(h('strong', null, 'Arranging widgets'));
+      t.append(h('strong', null, NS.t('tray.title')));
       if (w.hidden.length) {
-        t.append(h('span.tray-label', null, 'Add:'));
-        w.hidden.forEach(id => t.append(h('button.chip', { onclick: () => this.show(id) }, '＋ ' + REGISTRY[id].icon + ' ' + REGISTRY[id].title)));
+        t.append(h('span.tray-label', null, NS.t('tray.add')));
+        w.hidden.forEach(id => t.append(h('button.chip', { onclick: () => this.show(id) }, '＋ ' + REGISTRY[id].icon + ' ' + NS.t('w.' + id))));
       }
-      t.append(h('button.btn.primary', { onclick: () => this.setEdit(false) }, 'Done'));
+      t.append(h('button.btn.primary', { onclick: () => this.setEdit(false) }, NS.t('btn.done')));
     },
 
     setEdit(v) {

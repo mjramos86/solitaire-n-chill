@@ -10,6 +10,7 @@
   'use strict';
   const NS = window.SNC;
   const { h, clamp } = NS;
+  const tr = (...a) => NS.t(...a);
 
   /* [code, label, hl, gl, ceid-language] – Google News "editions" */
   const REGIONS = [
@@ -47,6 +48,9 @@
     return /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : '🌍';
   };
   const regionByCode = (c) => REGIONS.find(r => r[0] === c);
+  /** name of an edition in the UI language (the three language-specific editions have their own strings) */
+  const regionLabel = (r) => (['WORLD', 'CA', 'CA-FR'].includes(r[0]) ? tr('news.region.' + r[0]) : NS.i18n.regionName(r[0], r[1]));
+  const topicLabel = (key) => tr('topic.' + key);
 
   /** 'auto' → the visitor's browser region if we have an edition for it, else Worldwide. */
   function autoRegion() {
@@ -173,15 +177,7 @@
     return { items: items.slice(0, cfg.count), partial: ok.length < urls.length };
   }
 
-  const ago = (ms) => {
-    if (!ms) return '';
-    const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
-    if (m < 1) return 'now';
-    if (m < 60) return m + 'm';
-    const hr = Math.round(m / 60);
-    if (hr < 24) return hr + 'h';
-    return Math.round(hr / 24) + 'd';
-  };
+  const ago = (ms) => (ms ? NS.i18n.ago(ms) : '');
 
   /* ---------------------------------------------------------------- the widget */
   function mount(body) {
@@ -198,14 +194,14 @@
       const c = getCfg();
       const code = c.region === 'auto' ? autoRegion() : c.region;
       const reg = regionByCode(code) || REGIONS[0];
-      const labels = (c.topics || []).map(k => (TOPICS.find(t => t[0] === k) || [])[1]).filter(Boolean);
+      const labels = (c.topics || []).filter(k => TOPICS.some(x => x[0] === k)).map(topicLabel);
       if (c.query) labels.push('“' + c.query.trim() + '”');
-      if (c.custom) labels.push('feed');
+      if (c.custom) labels.push(tr('news.feedWord'));
       return h('div.nw-bar', null,
-        h('div.nw-scope', { title: 'Region and subjects' }, h('span.nw-flag', flag(reg[0] === 'WORLD' ? '' : reg[0])), h('span.nw-scope-txt', { title: labels.join(', ') }, (reg[0] === 'WORLD' ? 'Worldwide' : reg[1]) + ' · ' + (labels.join(', ') || 'Top stories'))),
+        h('div.nw-scope', { title: tr('news.scope') }, h('span.nw-flag', flag(reg[0] === 'WORLD' ? '' : reg[0])), h('span.nw-scope-txt', { title: labels.join(', ') }, (reg[0] === 'WORLD' ? tr('news.worldwide') : regionLabel(reg)) + ' · ' + (labels.join(', ') || topicLabel('top')))),
         h('span.nw-tools', null,
-          h('button.ico.small', { title: 'Refresh', 'aria-label': 'Refresh news', onclick: () => refresh(true) }, '↻'),
-          h('button.ico.small', { title: 'Region & subjects', 'aria-label': 'News settings', onclick: () => { mode = 'settings'; draw(); } }, '⚙')));
+          h('button.ico.small', { title: tr('tip.refresh'), 'aria-label': tr('news.refreshAria'), onclick: () => refresh(true) }, '↻'),
+          h('button.ico.small', { title: tr('news.settingsTip'), 'aria-label': tr('news.settingsAria'), onclick: () => { mode = 'settings'; draw(); } }, '⚙')));
     };
 
     function drawList() {
@@ -219,32 +215,32 @@
         list.append(h('li', null, it.link ? h('a.nw-item', { href: it.link, target: '_blank', rel: 'noopener noreferrer' }, ...inner) : h('span.nw-item', null, ...inner)));
       });
       root.append(list);
-      if (state.error && !state.items.length) root.append(h('div.w-note', null, state.error), h('button.btn.small', { onclick: () => refresh(true) }, 'Try again'));
-      else if (state.empty) root.append(h('div.w-note', null, getCfg().topics && getCfg().topics.includes('local') ? 'Type a town or city under “Local” in the settings (⚙).' : 'Pick a subject, a keyword or a feed in the settings (⚙).'));
-      else if (!loading && !state.items.length) root.append(h('div.w-note', null, 'No headlines found for that mix – try other subjects.'));
+      if (state.error && !state.items.length) root.append(h('div.w-note', null, tr(state.error)), h('button.btn.small', { onclick: () => refresh(true) }, tr('btn.tryAgain')));
+      else if (state.empty) root.append(h('div.w-note', null, getCfg().topics && getCfg().topics.includes('local') ? tr('news.emptyLocal') : tr('news.empty')));
+      else if (!loading && !state.items.length) root.append(h('div.w-note', null, tr('news.noHeadlines')));
       const foot = [];
-      if (state.updated) foot.push('Updated ' + new Date(state.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      if (state.stale) foot.push('offline – last reading');
-      if (state.partial) foot.push('some sources unavailable');
+      if (state.updated) foot.push(tr('news.updated', { time: new Date(state.updated).toLocaleTimeString(NS.i18n.locale(), { hour: '2-digit', minute: '2-digit' }) }));
+      if (state.stale) foot.push(tr('news.offline'));
+      if (state.partial) foot.push(tr('news.partial'));
       if (foot.length) root.append(h('div.w-note.nw-foot', null, foot.join(' · ')));
     }
 
     function drawSettings() {
       const c = getCfg();
       root.innerHTML = '';
-      const regionSel = h('select.text.nw-select', { 'aria-label': 'Region', onchange: (e) => { setCfg({ region: e.target.value }); dirty = true; } },
-        h('option', { value: 'auto', selected: c.region === 'auto' }, '📍 My region (' + (regionByCode(autoRegion())[0] === 'WORLD' ? 'worldwide' : regionByCode(autoRegion())[1]) + ')'),
-        REGIONS.map(r => h('option', { value: r[0], selected: c.region === r[0] }, (r[0] === 'WORLD' ? '' : flag(r[0]) + '  ') + r[1])));
+      const regionSel = h('select.text.nw-select', { 'aria-label': tr('news.regionAria'), onchange: (e) => { setCfg({ region: e.target.value }); dirty = true; } },
+        h('option', { value: 'auto', selected: c.region === 'auto' }, tr('news.myRegion', { name: regionByCode(autoRegion())[0] === 'WORLD' ? tr('news.worldwide') : regionLabel(regionByCode(autoRegion())) })),
+        REGIONS.map(r => h('option', { value: r[0], selected: c.region === r[0] }, (r[0] === 'WORLD' ? '' : flag(r[0]) + '  ') + regionLabel(r))));
       const chips = h('div.nw-chips');
       const renderChips = () => {
         chips.innerHTML = '';
-        TOPICS.forEach(([key, label]) => {
+        TOPICS.forEach(([key]) => {
           const on = (getCfg().topics || []).includes(key);
           chips.append(h('button.chip' + (on ? '.on' : ''), { type: 'button', 'aria-pressed': String(on), onclick: () => {
             const cur = getCfg().topics || [];
             setCfg({ topics: on ? cur.filter(k => k !== key) : [...cur, key] });
             dirty = true; renderChips(); renderLocal();
-          } }, label));
+          } }, topicLabel(key)));
         });
       };
       const localWrap = h('div.nw-field');
@@ -252,24 +248,24 @@
         localWrap.innerHTML = '';
         if (!(getCfg().topics || []).includes('local')) return;
         const weatherCity = ((NS.settings.get('widgets.cfg.weather') || {}).name || '').split(',')[0].replace(/\s*·.*/, '').trim();
-        const inp = h('input.text', { type: 'text', placeholder: weatherCity ? 'e.g. ' + weatherCity : 'Town or city', value: getCfg().place || '', 'aria-label': 'Local place', onkeydown: (e) => e.stopPropagation(),
+        const inp = h('input.text', { type: 'text', placeholder: weatherCity ? tr('news.localEg', { city: weatherCity }) : tr('news.localPh'), value: getCfg().place || '', 'aria-label': tr('news.localAria'), onkeydown: (e) => e.stopPropagation(),
           onchange: (e) => { setCfg({ place: e.target.value }); dirty = true; } });
-        localWrap.append(h('label', null, 'Local news for'), inp);
-        if (!getCfg().place && weatherCity && weatherCity !== 'Your location') { setCfg({ place: weatherCity }); inp.value = weatherCity; dirty = true; }
+        localWrap.append(h('label', null, tr('news.localFor')), inp);
+        if (!getCfg().place && weatherCity && weatherCity !== '@geo' && weatherCity !== 'Your location' && weatherCity !== tr('wx.yourLocation')) { setCfg({ place: weatherCity }); inp.value = weatherCity; dirty = true; }
       };
       const field = (label, el, hint) => h('div.nw-field', null, h('label', null, label), el, hint ? h('small', null, hint) : null);
       renderChips(); renderLocal();
       root.append(
-        h('div.nw-bar', null, h('strong.nw-set-title', null, 'News settings'), h('button.btn.small.primary', { onclick: () => { mode = 'list'; draw(); if (dirty) { dirty = false; refresh(true); } } }, 'Done')),
-        field('Where in the world', regionSel),
-        field('Subjects', chips, 'Pick one or several – they are merged.'),
+        h('div.nw-bar', null, h('strong.nw-set-title', null, tr('news.settings')), h('button.btn.small.primary', { onclick: () => { mode = 'list'; draw(); if (dirty) { dirty = false; refresh(true); } } }, tr('btn.done'))),
+        field(tr('news.where'), regionSel),
+        field(tr('news.subjects'), chips, tr('news.subjectsHint')),
         localWrap,
-        field('Keywords', h('input.text', { type: 'text', placeholder: 'e.g. space telescope, climate', value: c.query || '', 'aria-label': 'Keywords', onkeydown: (e) => e.stopPropagation(),
-          onchange: (e) => { setCfg({ query: e.target.value }); dirty = true; } }), 'Optional – adds a search for these words.'),
-        field('Your own RSS feed', h('input.text', { type: 'url', placeholder: 'https://… feed URL', value: c.custom || '', 'aria-label': 'Custom RSS feed', onkeydown: (e) => e.stopPropagation(),
-          onchange: (e) => { setCfg({ custom: e.target.value.trim() }); dirty = true; } }), 'Optional – any RSS or Atom link.'),
-        field('Headlines', h('div.seg', null, [5, 8, 12].map(n => h('button' + (getCfg().count === n ? '.on' : ''), { type: 'button', onclick: (e) => { setCfg({ count: n }); dirty = true; e.currentTarget.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.currentTarget)); } }, String(n))))),
-        h('div.w-note', null, 'Headlines come from Google News through public relay services (rss2json / allorigins / corsproxy), so they see the region and subjects you choose.'));
+        field(tr('news.keywords'), h('input.text', { type: 'text', placeholder: tr('news.keywordsPh'), value: c.query || '', 'aria-label': tr('news.keywords'), onkeydown: (e) => e.stopPropagation(),
+          onchange: (e) => { setCfg({ query: e.target.value }); dirty = true; } }), tr('news.keywordsHint')),
+        field(tr('news.feed'), h('input.text', { type: 'url', placeholder: tr('news.feedPh'), value: c.custom || '', 'aria-label': tr('news.feedAria'), onkeydown: (e) => e.stopPropagation(),
+          onchange: (e) => { setCfg({ custom: e.target.value.trim() }); dirty = true; } }), tr('news.feedHint')),
+        field(tr('news.headlines'), h('div.seg', null, [5, 8, 12].map(n => h('button' + (getCfg().count === n ? '.on' : ''), { type: 'button', onclick: (e) => { setCfg({ count: n }); dirty = true; e.currentTarget.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.currentTarget)); } }, String(n))))),
+        h('div.w-note', null, tr('news.privacy')));
     }
     let dirty = false;
     function draw() { if (mode === 'settings') drawSettings(); else drawList(); }
@@ -291,7 +287,7 @@
       } catch (e) {
         if (my !== reqId) return;
         if (cache && cache.key === key) state = { items: cache.items, error: '', updated: cache.t, stale: true, partial: false, empty: false };
-        else state = { items: [], error: 'Couldn’t load headlines right now – check your connection.', updated: 0, stale: false, partial: false, empty: false };
+        else state = { items: [], error: 'news.errLoad', updated: 0, stale: false, partial: false, empty: false };
       } finally { loading = false; if (mode === 'list') draw(); }
     }
 
@@ -299,7 +295,7 @@
     refresh(false);
     NS.bus.on('widgets', () => { if (body.isConnected && !state.updated && !loading) refresh(false); });
     setInterval(() => { if (body.isConnected && !document.hidden && Date.now() - (state.updated || 0) > 15 * 60 * 1000) refresh(true); }, 60 * 1000);
-    return { update() {} };
+    return { update() {}, relang: draw };
   }
 
   NS.newsWidget = { mount, feedUrls, parseFeed, REGIONS, TOPICS, loadAll };

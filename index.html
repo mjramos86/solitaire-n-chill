@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>Solitaire n’ Chill</title>
-  <meta name="description" content="A cosy, customisable Klondike solitaire. Play your own music, pick your background and card backs, and keep the time and weather nearby.">
+  <meta name="description" data-i18n-content="meta.desc" content="A cosy, customisable Klondike solitaire. Play your own music, pick your background and card backs, and keep the time and weather nearby.">
   <meta name="theme-color" content="#1b2038">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231b2038'/%3E%3Ctext x='50' y='70' font-size='62' text-anchor='middle' fill='%23ffb86b'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,36 +27,37 @@
         <span class="brand-name">solitaire <em>n’</em> chill</span>
       </div>
 
-      <nav class="actions" aria-label="Game controls">
-        <button id="btn-new" class="btn" aria-haspopup="menu"><span class="ico-l" aria-hidden="true">✦</span><span class="lbl">New</span><span class="caret" aria-hidden="true">▾</span></button>
-        <button id="btn-undo" class="btn" title="Undo (U)"><span class="ico-l" aria-hidden="true">↶</span><span class="lbl">Undo</span></button>
-        <button id="btn-hint" class="btn" title="Hint (H)"><span class="ico-l" aria-hidden="true">💡</span><span class="lbl">Hint</span></button>
-        <button id="btn-finish" class="btn accent" title="Finish for me (F)" hidden><span class="ico-l" aria-hidden="true">✨</span><span class="lbl">Finish</span></button>
+      <nav class="actions" aria-label="Game controls" data-i18n-aria="aria.controls">
+        <button id="btn-new" class="btn" aria-haspopup="menu"><span class="ico-l" aria-hidden="true">✦</span><span class="lbl" data-i18n="btn.new">New</span><span class="caret" aria-hidden="true">▾</span></button>
+        <button id="btn-undo" class="btn" title="Undo (U)" data-i18n-title="tip.undo"><span class="ico-l" aria-hidden="true">↶</span><span class="lbl" data-i18n="btn.undo">Undo</span></button>
+        <button id="btn-hint" class="btn" title="Hint (H)" data-i18n-title="tip.hint"><span class="ico-l" aria-hidden="true">💡</span><span class="lbl" data-i18n="btn.hint">Hint</span></button>
+        <button id="btn-finish" class="btn accent" title="Finish for me (F)" data-i18n-title="tip.finish" hidden><span class="ico-l" aria-hidden="true">✨</span><span class="lbl" data-i18n="btn.finish">Finish</span></button>
       </nav>
 
       <div id="mini-stats" class="mini-stats" aria-live="off"></div>
 
       <div class="tools">
-        <button id="btn-account" class="btn guest" title="Sign in to save your game" hidden><span class="ico-l acct-ico" aria-hidden="true">👤</span><span class="lbl acct-lbl">Login</span></button>
-        <button id="btn-widgets" class="btn" title="Widgets"><span class="ico-l" aria-hidden="true">🧩</span><span class="lbl">Widgets</span></button>
-        <button id="btn-customize" class="btn" title="Customize"><span class="ico-l" aria-hidden="true">🎨</span><span class="lbl">Customize</span></button>
+        <button id="btn-account" class="btn guest" title="Sign in to save your game" data-i18n-title="tip.login" hidden><span class="ico-l acct-ico" aria-hidden="true">👤</span><span class="lbl acct-lbl" data-i18n="btn.login">Login</span></button>
+        <button id="btn-widgets" class="btn" title="Widgets" data-i18n-title="tip.widgets"><span class="ico-l" aria-hidden="true">🧩</span><span class="lbl" data-i18n="btn.widgets">Widgets</span></button>
+        <button id="btn-customize" class="btn" title="Customize" data-i18n-title="tip.customize"><span class="ico-l" aria-hidden="true">🎨</span><span class="lbl" data-i18n="btn.customize">Customize</span></button>
       </div>
     </header>
 
     <main class="stage">
-      <aside id="rail-left" class="rail left" aria-label="Widgets (left)"></aside>
-      <div class="board-wrap"><div id="board" class="board" role="application" aria-label="Solitaire table – drag cards, or tap a card to move it"></div></div>
-      <aside id="rail-right" class="rail right" aria-label="Widgets (right)"></aside>
+      <aside id="rail-left" class="rail left" aria-label="Widgets (left)" data-i18n-aria="aria.railLeft"></aside>
+      <div class="board-wrap"><div id="board" class="board" role="application" aria-label="Solitaire table – drag cards, or tap a card to move it" data-i18n-aria="aria.board"></div></div>
+      <aside id="rail-right" class="rail right" aria-label="Widgets (right)" data-i18n-aria="aria.railRight"></aside>
     </main>
 
     <footer class="dock">
       <div id="music" class="music"></div>
+      <button id="btn-lang" class="btn lang-btn" aria-haspopup="menu"><span class="ico-l" aria-hidden="true">🌐</span><span class="lang-code">EN</span></button>
     </footer>
   </div>
 
-  <aside id="drawer" class="drawer" aria-label="Widgets">
-    <div class="drawer-head"><strong>Widgets</strong>
-      <span><button id="drawer-arrange" class="btn small">Arrange</button> <button id="drawer-close" class="ico" aria-label="Close widgets">✕</button></span>
+  <aside id="drawer" class="drawer" aria-label="Widgets" data-i18n-aria="aria.widgets">
+    <div class="drawer-head"><strong data-i18n="btn.widgets">Widgets</strong>
+      <span><button id="drawer-arrange" class="btn small" data-i18n="btn.arrange">Arrange</button> <button id="drawer-close" class="ico" aria-label="Close widgets" data-i18n-aria="aria.closeWidgets">✕</button></span>
     </div>
     <div id="drawer-list" class="drawer-list"></div>
   </aside>
@@ -65,6 +66,13 @@
   <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;color:#fff;background:#1b2038;font:16px sans-serif">Solitaire n’ Chill needs JavaScript to deal the cards.</p></noscript>
 
   <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/lang/en.js"></script>
+  <script src="js/lang/fr.js"></script>
+  <script src="js/lang/es.js"></script>
+  <script src="js/lang/pt.js"></script>
+  <script src="js/lang/de.js"></script>
+  <script src="js/lang/ru.js"></script>
   <script src="js/klondike.js"></script>
   <script src="js/themes.js"></script>
   <script src="js/settings.js"></script>

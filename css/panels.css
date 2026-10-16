@@ -100,7 +100,7 @@ body.drawer-open .drawer { transform: none; box-shadow: -20px 0 60px rgba(0, 0, 
 @media (min-width: 1180px) { .drawer { display: none; } }
 
 /* ================================================================ music player */
-.music { position: relative; width: min(390px, 100%); }
+.music { position: relative; width: min(390px, 100%); flex: 0 1 390px; min-width: 0; }
 .music-bar {
   display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-radius: 999px; cursor: pointer;
   background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
@@ -215,7 +215,7 @@ body.drawer-open .drawer { transform: none; box-shadow: -20px 0 60px rgba(0, 0, 
 /* ================================================================ small screens */
 @media (max-width: 760px) {
   .dock { padding: 8px 8px; }
-  .music { width: 100%; }
+  .music { width: auto; flex: 1 1 0; }
   .music-panel { width: calc(100vw - 16px); max-height: calc(100dvh - 130px); }
   .cz-content { padding-left: 16px; padding-right: 16px; }
   .modal.wide { height: min(90dvh, 720px); }

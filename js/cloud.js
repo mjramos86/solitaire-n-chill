@@ -35,6 +35,9 @@
   const saveMeta = () => NS.store.set('cloud.meta', meta);
   const saveLink = () => NS.store.set('cloud.link', link);
   const saveDelta = () => NS.store.set('cloud.delta', delta);
+  const t = (...a) => NS.t(...a);
+  /** status messages are stored as language keys ('cloud.…') so they follow a language change; anything else is shown as is */
+  const msgText = (m) => (/^cloud\.\w+$/.test(m || '') ? t(m) : (m || ''));
   function setStatus(status, message) {
     S.status = status; S.message = message || '';
     NS.bus.emit('cloud');
@@ -88,13 +91,13 @@
       let done = false;
       const finish = (v) => { if (!done) { done = true; resolve(v); } };
       const m = NS.modal.open({
-        title: 'Welcome back ☁️',
+        title: t('cloud.conflictTitle'),
         body: h('div', null,
-          h('p.confirm-text', null, 'This device already has its own look, widgets or music list, and your account has different ones saved. Which should win?'),
-          h('p.cz-note', { style: 'margin-top:10px' }, 'Your game statistics are merged either way – nothing is lost.')),
+          h('p.confirm-text', null, t('cloud.conflictText')),
+          h('p.cz-note', { style: 'margin-top:10px' }, t('cloud.conflictNote'))),
         actions: [
-          h('button.btn', { onclick: () => { finish('device'); m.close(); } }, 'Keep this device’s'),
-          h('button.btn.primary', { onclick: () => { finish('cloud'); m.close(); } }, 'Use my account’s'),
+          h('button.btn', { onclick: () => { finish('device'); m.close(); } }, t('cloud.keepDevice')),
+          h('button.btn.primary', { onclick: () => { finish('cloud'); m.close(); } }, t('cloud.useAccount')),
         ],
         onClose: () => finish('cancel'),
       });
@@ -134,7 +137,7 @@
         const conflicts = SECTIONS.filter(s => meta[s] > 0 && doc[s] != null && doc[s] !== readLocal[s]());
         if (conflicts.length) {
           choice = await askConflict();
-          if (choice === 'cancel') { link = null; setStatus('paused', 'Sync is paused until you choose which data to keep.'); return; }
+          if (choice === 'cancel') { link = null; setStatus('paused', 'cloud.paused'); return; }
         }
       }
 
@@ -183,12 +186,12 @@
 
   function friendly(e) {
     const code = (e && e.code) || '';
-    if (code === 'permission-denied' || code === 'firestore/permission-denied') return 'The database refused the request – check the Firestore rules (see docs/FIREBASE_SETUP.md).';
-    if (code === 'auth/unauthorized-domain') return 'This site’s address is not in Firebase’s authorised domains yet.';
-    if (code === 'auth/operation-not-allowed') return 'Google sign-in is switched off in your Firebase project.';
-    if (code === 'auth/network-request-failed' || code === 'unavailable') return 'Can’t reach the cloud right now – will retry.';
+    if (code === 'permission-denied' || code === 'firestore/permission-denied') return 'cloud.errRules';
+    if (code === 'auth/unauthorized-domain') return 'cloud.errDomain';
+    if (code === 'auth/operation-not-allowed') return 'cloud.errNotAllowed';
+    if (code === 'auth/network-request-failed' || code === 'unavailable') return 'cloud.errNetwork';
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return '';
-    return (e && e.message) ? String(e.message).slice(0, 140) : 'Something went wrong.';
+    return (e && e.message) ? String(e.message).slice(0, 140) : 'cloud.errGeneric';
   }
 
   /* ---------------------------------------------------------------- Firebase backend (compat SDK, loaded on demand) */
@@ -293,14 +296,14 @@
       } catch (e) {
         const msg = friendly(e);
         setStatus('signedout', msg);
-        if (msg) NS.toast(msg, 5000);
+        if (msg) NS.toast(msgText(msg), 5000);
       }
     },
     async signOut() {
       if (!S.backend) return;
       clearTimeout(timer);
       await S.backend.signOut();
-      NS.toast('Signed out – your data stays on this device.');
+      NS.toast(t('cloud.signedOut'));
     },
     syncNow() { return sync(); },
     async deleteCloudData() {
@@ -309,9 +312,9 @@
         await S.backend.del(S.user.uid);
         link = null; NS.store.remove('cloud.link');
         delta = { played: 0, won: 0, touch: false }; saveDelta();
-        NS.toast('Your cloud data was deleted.');
-        setStatus('synced', 'Cloud data deleted. It will be uploaded again at the next change.');
-      } catch (e) { NS.toast(friendly(e) || 'Could not delete – try again.', 5000); }
+        NS.toast(t('cloud.deleted'));
+        setStatus('synced', 'cloud.deletedMsg');
+      } catch (e) { NS.toast(msgText(friendly(e)) || t('cloud.deleteFail'), 5000); }
     },
     noteStat,
 
@@ -322,30 +325,27 @@
         if (S.user) {
           const u = S.user;
           const ago = S.lastSync ? Math.max(0, Math.round((Date.now() - S.lastSync) / 1000)) : 0;
-          const label = { syncing: 'Syncing…', synced: S.lastSync ? (ago < 10 ? 'All saved just now' : 'All saved') : 'Signed in', offline: 'Offline – will retry', error: 'Sync problem', paused: 'Paused', connecting: 'Connecting…' }[S.status] || 'Signed in';
+          const label = t({ syncing: 'cloud.st.syncing', synced: S.lastSync ? (ago < 10 ? 'cloud.st.justNow' : 'cloud.st.saved') : 'cloud.st.signedIn', offline: 'cloud.st.offline', error: 'cloud.st.error', paused: 'cloud.st.paused', connecting: 'cloud.st.connecting' }[S.status] || 'cloud.st.signedIn');
           box.append(...[
             h('div.acct-card', null,
               u.photo ? h('img.avatar.big', { src: u.photo, alt: '', referrerpolicy: 'no-referrer' }) : h('span.avatar.big.ph', null, (u.name || u.email || '?').slice(0, 1).toUpperCase()),
-              h('div.acct-who', null, h('b', null, u.name || 'Signed in'), h('small', null, u.email))),
+              h('div.acct-who', null, h('b', null, u.name || t('cloud.signedInFallback')), h('small', null, u.email))),
             h('div.acct-status.' + S.status, null, h('span.dot'), label),
-            S.message ? h('div.mp-msg.show.warn', null, S.message) : null,
+            S.message ? h('div.mp-msg.show.warn', null, msgText(S.message)) : null,
             h('ul.acct-list', null,
-              h('li', null, '🎨 Look, background, card backs, widgets'),
-              h('li', null, '📊 Statistics: games, wins, streaks, records'),
-              h('li', null, '🎵 Music list'),
-              h('li', null, '📝 Sticky note'),
-              h('li.dim', null, 'Pictures you upload stay on the device they were added on.')),
+              h('li', null, t('cloud.l1')), h('li', null, t('cloud.l2')), h('li', null, t('cloud.l3')), h('li', null, t('cloud.l4')),
+              h('li.dim', null, t('cloud.l5'))),
             h('div.row', null,
-              h('button.btn', { onclick: () => Cloud.syncNow() }, '↻ Sync now'),
-              h('button.btn', { onclick: () => Cloud.signOut() }, 'Sign out'),
-              h('button.btn.danger', { onclick: () => NS.modal.confirm('Delete your cloud data?', 'This removes your saved preferences, music list, note and statistics from the cloud. Your game and settings on this device are kept.', 'Delete', () => Cloud.deleteCloudData()) }, 'Delete cloud data'))].filter(Boolean));
+              h('button.btn', { onclick: () => Cloud.syncNow() }, t('cloud.syncNow')),
+              h('button.btn', { onclick: () => Cloud.signOut() }, t('cloud.signOut')),
+              h('button.btn.danger', { onclick: () => NS.modal.confirm(t('cloud.deleteTitle'), t('cloud.deleteText'), t('cloud.delete'), () => Cloud.deleteCloudData()) }, t('cloud.deleteData')))].filter(Boolean));
         } else {
           const busy = S.status === 'connecting';
           box.append(...[
-            h('p.cz-note', null, 'Sign in to keep your look, music list, notes and statistics safe, and to carry them to your phone or another computer. It’s optional – playing as a guest works exactly the same.'),
-            h('button.gbtn', { disabled: busy, onclick: () => Cloud.signIn() }, h('span.gmark', { innerHTML: G_LOGO }), busy ? 'Opening Google…' : 'Continue with Google'),
-            S.message ? h('div.mp-msg.show.warn', null, S.message) : null,
-            h('p.cz-note.fine', null, 'We only receive your Google name, email and a private account ID. Data is stored in a document only your account can read.')].filter(Boolean));
+            h('p.cz-note', null, t('cloud.intro')),
+            h('button.gbtn', { disabled: busy, onclick: () => Cloud.signIn() }, h('span.gmark', { innerHTML: G_LOGO }), t(busy ? 'cloud.opening' : 'cloud.google')),
+            S.message ? h('div.mp-msg.show.warn', null, msgText(S.message)) : null,
+            h('p.cz-note.fine', null, t('cloud.fine'))].filter(Boolean));
         }
       };
       const sub = () => {
@@ -353,6 +353,7 @@
         draw();
       };
       const off = NS.bus.on('cloud', sub);
+      const offLang = NS.bus.on('lang', () => { if (box.isConnected) draw(); else offLang(); });
       draw();
     },
   };

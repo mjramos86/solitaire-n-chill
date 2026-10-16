@@ -84,13 +84,15 @@
     return { kind: 'web', url }; // unknown service: try as a stream, fall back to embedding the page
   }
 
-  const KIND_LABEL = { youtube: 'YouTube', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Music', deezer: 'Deezer', mixcloud: 'Mixcloud', vimeo: 'Vimeo', twitch: 'Twitch', audio: 'Audio', web: 'Web' };
+  const tr = (...a) => NS.t(...a);
+  const BRAND = { youtube: 'YouTube', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Music', deezer: 'Deezer', mixcloud: 'Mixcloud', vimeo: 'Vimeo', twitch: 'Twitch' };
+  const kindLabel = (kind) => BRAND[kind] || (kind === 'audio' ? tr('mp.kind.audio') : kind === 'web' ? tr('mp.kind.web') : '');
   const KIND_ICON = { youtube: '▶', spotify: '●', soundcloud: '☁', apple: '♪', deezer: '♫', mixcloud: '☾', vimeo: '▷', twitch: '◆', audio: '♬', web: '◌' };
 
   function fallbackTitle(item) {
-    const k = KIND_LABEL[item.kind] || 'Link';
-    if (item.kind === 'spotify') return `Spotify ${item.type}`;
-    if (item.kind === 'youtube') return item.vid ? 'YouTube video' : 'YouTube playlist';
+    const k = kindLabel(item.kind) || 'Link';
+    if (item.kind === 'spotify') return tr('mp.ft.spotify', { type: tr('mp.sp.' + item.type) === 'mp.sp.' + item.type ? item.type : tr('mp.sp.' + item.type) });
+    if (item.kind === 'youtube') return tr(item.vid ? 'mp.ft.ytVideo' : 'mp.ft.ytList');
     if (item.kind === 'audio' || item.kind === 'web') {
       try {
         const u = new URL(item.url);
@@ -98,7 +100,7 @@
         return f ? f.replace(/\.[a-z0-9]{2,5}$/i, '') : u.hostname;
       } catch (e) { return k; }
     }
-    return k + ' link';
+    return tr('mp.ft.link', { k });
   }
 
   /* best-effort title lookup (all failures are silent) */
@@ -150,7 +152,7 @@
 
   const IFRAME_ALLOW = 'autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture';
   function iframe(src, extra) {
-    return h('iframe', Object.assign({ src, allow: IFRAME_ALLOW, allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin', frameborder: '0', title: 'Music player' }, extra || {}));
+    return h('iframe', Object.assign({ src, allow: IFRAME_ALLOW, allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin', frameborder: '0', title: tr('mp.title') }, extra || {}));
   }
 
   /* ================================================================ engines
@@ -197,11 +199,10 @@
           },
           onError: (e) => {
             const code = e.data;
-            cb.error(code === 101 || code === 150 || code === 153
-              ? 'The owner of that video doesn’t allow embedding. Try another link, or open it on YouTube.'
-              : code === 100 ? 'That video is private or has been removed.'
-                : code === 2 ? 'That doesn’t look like a valid YouTube link.'
-                  : 'YouTube couldn’t play that (error ' + code + ').');
+            if (code === 101 || code === 150 || code === 153) cb.error('mp.errEmbed');
+            else if (code === 100) cb.error('mp.errRemoved');
+            else if (code === 2) cb.error('mp.errInvalid');
+            else cb.error('mp.errYt', { code });
           },
         },
       });
@@ -254,7 +255,7 @@
     let started = false, dead = false, gaveUp = null;
     const eng = {
       el: null, controllable: true, hasSeek: true, nativeNav: false,
-      play() { a.play().catch((err) => { if (err && err.name === 'NotAllowedError') cb.error('Press play to start the music.'); }); },
+      play() { a.play().catch((err) => { if (err && err.name === 'NotAllowedError') cb.error('mp.errPress'); }); },
       pause() { a.pause(); },
       seek(t) { if (isFinite(a.duration)) a.currentTime = clamp(t, 0, a.duration); },
       setVolume(v) { a.volume = clamp(v / 100, 0, 1); },
@@ -268,7 +269,7 @@
     a.addEventListener('error', () => {
       if (dead) return;
       if (item.kind === 'web' && !started) cb.fallbackToEmbed();
-      else cb.error('That audio couldn’t be played (the server may block it, or the format isn’t supported).');
+      else cb.error('mp.errAudio');
     });
     if (item.kind === 'web') gaveUp = setTimeout(() => { if (!started && !dead) { a.pause(); cb.fallbackToEmbed(); } }, 7000);
     return eng;
@@ -301,9 +302,9 @@
 
   /* ================================================================ the player */
   const EXAMPLES = [
-    { label: 'Lofi radio (YouTube)', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
-    { label: 'Lo-Fi Beats (Spotify)', url: 'https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn' },
-    { label: 'Groove Salad (radio stream)', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { label: 'mp.ex1', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
+    { label: 'mp.ex2', url: 'https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn' },
+    { label: 'mp.ex3', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
   ];
 
   const Music = {
@@ -326,6 +327,7 @@
       this.renderQueue();
       this.renderBar();
       document.addEventListener('paste', (e) => this.onGlobalPaste(e));
+      NS.bus.on('lang', () => this.relang());
     },
 
     save() { NS.store.set('music', { items: this.items.slice(0, 60), cur: this.cur, volume: this.volume, repeat: this.repeat }); NS.bus.emit('music'); },
@@ -350,7 +352,7 @@
     build(mount) {
       const u = this.ui;
       u.root = mount;
-      u.input = h('input.mp-input', { type: 'text', placeholder: 'Paste a music link…', 'aria-label': 'Music link', spellcheck: false, autocomplete: 'off',
+      u.input = h('input.mp-input', { type: 'text', spellcheck: false, autocomplete: 'off',
         onkeydown: (e) => { if (e.key === 'Enter') this.submit(true); e.stopPropagation(); },
         onfocus: () => { clearTimeout(this._typingT); this.ui.root.classList.add('typing'); },
         onblur: () => { // wait a beat: tapping Play / ✕ blurs the field first, and moving the panel now would make the tap miss
@@ -359,40 +361,66 @@
         } });
       u.msg = h('div.mp-msg', { role: 'status' });
       u.embed = h('div.mp-embed');
-      u.title = h('div.mp-now-title', null, 'Nothing playing');
+      u.title = h('div.mp-now-title');
       u.sub = h('div.mp-now-sub', null, '');
-      u.play = h('button.ico.mp-play', { title: 'Play / pause', 'aria-label': 'Play or pause', onclick: () => this.toggle() }, '▶');
-      u.prev = h('button.ico', { title: 'Previous', 'aria-label': 'Previous', onclick: () => this.step(-1) }, '⏮');
-      u.next = h('button.ico', { title: 'Next', 'aria-label': 'Next', onclick: () => this.step(1) }, '⏭');
-      u.repeatBtn = h('button.ico.small', { title: 'Repeat', 'aria-label': 'Repeat mode', onclick: () => this.cycleRepeat() });
-      u.vol = h('input.range.mp-vol', { type: 'range', min: 0, max: 100, value: this.volume, 'aria-label': 'Music volume', oninput: (e) => this.setVolume(+e.target.value) });
-      u.seek = h('input.range.mp-seek', { type: 'range', min: 0, max: 1000, value: 0, 'aria-label': 'Seek', oninput: (e) => { if (this.engine && this.engine.seek && this.dur) this.engine.seek(e.target.value / 1000 * this.dur); } });
+      u.play = h('button.ico.mp-play', { onclick: () => this.toggle() }, '▶');
+      u.prev = h('button.ico', { onclick: () => this.step(-1) }, '⏮');
+      u.next = h('button.ico', { onclick: () => this.step(1) }, '⏭');
+      u.repeatBtn = h('button.ico.small', { onclick: () => this.cycleRepeat() });
+      u.vol = h('input.range.mp-vol', { type: 'range', min: 0, max: 100, value: this.volume, oninput: (e) => this.setVolume(+e.target.value) });
+      u.seek = h('input.range.mp-seek', { type: 'range', min: 0, max: 1000, value: 0, oninput: (e) => { if (this.engine && this.engine.seek && this.dur) this.engine.seek(e.target.value / 1000 * this.dur); } });
       u.time = h('span.mp-time', null, '');
       u.queue = h('div.mp-queue');
-      u.hint = h('div.mp-hint', null,
-        h('p', null, 'Works with YouTube, YouTube Music, Spotify, SoundCloud, Apple Music, Deezer, Mixcloud, Vimeo, Twitch, plus direct audio files and radio streams.'),
-        h('div.mp-examples', null, EXAMPLES.map(ex => h('button.chip', { onclick: () => { u.input.value = ex.url; this.submit(true); } }, ex.label))));
+      u.hintP = h('p');
+      u.exChips = EXAMPLES.map(ex => h('button.chip', { onclick: () => { u.input.value = ex.url; this.submit(true); } }));
+      u.hint = h('div.mp-hint', null, u.hintP, h('div.mp-examples', null, u.exChips));
 
       u.panel = h('div.music-panel', { 'aria-hidden': 'true' },
-        h('div.mp-head', null, h('strong', null, 'Music'), h('button.ico.small', { title: 'Close', 'aria-label': 'Close music panel', onclick: () => this.setOpen(false) }, '✕')),
+        h('div.mp-head', null, u.headTitle = h('strong'), u.closeBtn = h('button.ico.small', { onclick: () => this.setOpen(false) }, '✕')),
         h('div.mp-addrow', null, u.input,
-          h('button.btn.primary', { onclick: () => this.submit(true) }, 'Play'),
-          h('button.btn', { title: 'Add to the list without playing', onclick: () => this.submit(false) }, '＋')),
+          u.playTxt = h('button.btn.primary', { onclick: () => this.submit(true) }),
+          u.addBtn = h('button.btn', { onclick: () => this.submit(false) }, '＋')),
         u.msg, u.embed,
         h('div.mp-controls', null, u.prev, u.play, u.next, u.repeatBtn, h('span.mp-vol-wrap', null, h('span.vol-ico', '🔊'), u.vol)),
         h('div.mp-seekrow', null, u.seek, u.time),
         u.queue, u.hint);
 
       u.barIcon = h('span.mp-bar-icon', null, '♪');
-      u.barTitle = h('span.mp-bar-title', null, 'Paste a music link');
-      u.barPlay = h('button.ico.mp-play', { title: 'Play / pause', 'aria-label': 'Play or pause', onclick: (e) => { e.stopPropagation(); this.toggle(); } }, '▶');
-      u.barNext = h('button.ico', { title: 'Next', 'aria-label': 'Next', onclick: (e) => { e.stopPropagation(); this.step(1); } }, '⏭');
-      u.bar = h('div.music-bar', { role: 'button', tabindex: 0, 'aria-label': 'Open music player',
+      u.barTitle = h('span.mp-bar-title');
+      u.barPlay = h('button.ico.mp-play', { onclick: (e) => { e.stopPropagation(); this.toggle(); } }, '▶');
+      u.barNext = h('button.ico', { onclick: (e) => { e.stopPropagation(); this.step(1); } }, '⏭');
+      u.bar = h('div.music-bar', { role: 'button', tabindex: 0,
         onclick: () => this.setOpen(!this.open), onkeydown: (e) => { if (e.key === 'Enter' && e.target === u.bar) this.setOpen(!this.open); } },
       u.barIcon, h('span.mp-bar-text', null, u.barTitle), u.barPlay, u.barNext, h('span.mp-caret', '⌃'));
 
       mount.append(u.panel, u.bar);
       u.panel.inert = true;
+      this.labels();
+    },
+
+    /** every fixed label of the player, in the current language */
+    labels() {
+      const u = this.ui;
+      const tip = (el, title, aria) => { el.title = title; el.setAttribute('aria-label', aria || title); };
+      u.input.placeholder = tr('mp.ph'); u.input.setAttribute('aria-label', tr('mp.aria'));
+      tip(u.play, tr('mp.playPause'), tr('mp.playPauseAria')); tip(u.barPlay, tr('mp.playPause'), tr('mp.playPauseAria'));
+      tip(u.prev, tr('mp.prev')); tip(u.next, tr('mp.next')); tip(u.barNext, tr('mp.next'));
+      u.repeatBtn.setAttribute('aria-label', tr('mp.repeatAria'));
+      u.vol.setAttribute('aria-label', tr('mp.volume')); u.seek.setAttribute('aria-label', tr('mp.seek'));
+      u.headTitle.textContent = tr('mp.title'); tip(u.closeBtn, tr('btn.close'), tr('mp.closeAria'));
+      u.playTxt.textContent = tr('mp.play'); u.addBtn.title = tr('mp.addTip'); u.addBtn.setAttribute('aria-label', tr('mp.addTip'));
+      u.bar.setAttribute('aria-label', tr('mp.openAria'));
+      u.hintP.textContent = tr('mp.hint');
+      u.exChips.forEach((c, i) => { c.textContent = tr(EXAMPLES[i].label); });
+    },
+
+    /** the language changed: redraw labels, the current message, the bar and the list – playback is untouched */
+    relang() {
+      if (!this.ui.root) return;
+      this.labels();
+      this.setMsg(this.msgKey, this.msgKind, this.msgParams);
+      this.renderBar(); this.renderQueue();
+      if (!this.dur && this.pos) this.onTime(this.pos, 0);
     },
 
     setOpen(v) {
@@ -403,16 +431,18 @@
       if (v) setTimeout(() => { if (!this.items.length) this.ui.input.focus(); }, 60);
     },
 
-    setMsg(text, kind) {
-      this.ui.msg.textContent = text || '';
-      this.ui.msg.className = 'mp-msg' + (text ? ' show ' + (kind || '') : '');
+    /** show a message by language key (kept so it can be re-translated) */
+    setMsg(key, kind, params) {
+      this.msgKey = key || ''; this.msgKind = kind; this.msgParams = params;
+      this.ui.msg.textContent = key ? tr(key, params) : '';
+      this.ui.msg.className = 'mp-msg' + (key ? ' show ' + (kind || '') : '');
     },
 
     renderBar() {
       const u = this.ui, it = this.items[this.cur];
-      u.barTitle.textContent = it ? (it.title || fallbackTitle(parseLink(it.url) || { kind: 'web', url: it.url })) : 'Paste a music link';
-      u.title.textContent = it ? u.barTitle.textContent : 'Nothing playing';
-      u.sub.textContent = it ? (KIND_LABEL[it.kind] || '') : '';
+      u.barTitle.textContent = it ? (it.title || fallbackTitle(parseLink(it.url) || { kind: 'web', url: it.url })) : tr('mp.barEmpty');
+      u.title.textContent = it ? u.barTitle.textContent : tr('mp.nothing');
+      u.sub.textContent = it ? kindLabel(it.kind) : '';
       u.barIcon.textContent = it ? (KIND_ICON[it.kind] || '♪') : '♪';
       const glyph = this.playing ? '⏸' : '▶';
       u.play.textContent = glyph; u.barPlay.textContent = glyph;
@@ -424,7 +454,7 @@
       u.root.classList.toggle('has-seek', !!(e && e.hasSeek));
       u.repeatBtn.textContent = this.repeat === 'one' ? '🔂' : '🔁';
       u.repeatBtn.classList.toggle('off', this.repeat === 'off');
-      u.repeatBtn.title = 'Repeat: ' + this.repeat;
+      u.repeatBtn.title = tr('mp.repeatState', { mode: tr('mp.rep.' + (this.repeat === 'one' || this.repeat === 'off' ? this.repeat : 'all')) });
       u.hint.style.display = this.items.length ? 'none' : '';
     },
 
@@ -436,15 +466,15 @@
         u.queue.appendChild(h('div.mp-row' + (i === this.cur ? '.cur' : ''), { onclick: () => this.playIndex(i), title: it.url },
           h('span.mp-row-ico', null, KIND_ICON[it.kind] || '♪'),
           h('span.mp-row-title', null, label),
-          h('span.mp-row-kind', null, KIND_LABEL[it.kind] || ''),
-          h('button.ico.small', { title: 'Remove', 'aria-label': 'Remove ' + label, onclick: (e) => { e.stopPropagation(); this.remove(i); } }, '✕')));
+          h('span.mp-row-kind', null, kindLabel(it.kind)),
+          h('button.ico.small', { title: tr('mp.remove'), 'aria-label': tr('mp.removeAria', { label }), onclick: (e) => { e.stopPropagation(); this.remove(i); } }, '✕')));
       });
     },
 
     /* ---------------------------------------------------------- queue operations */
     submit(playNow) {
       const text = this.ui.input.value.trim();
-      if (!text) { this.setMsg('Paste a link first – then press Play.', 'warn'); return; }
+      if (!text) { this.setMsg('mp.pasteFirst', 'warn'); return; }
       if (!this.addLink(text, playNow)) return;
       this.ui.input.value = '';
     },
@@ -452,7 +482,7 @@
     addLink(text, playNow) {
       const parsed = parseLink(text);
       if (!parsed) {
-        this.setMsg('Hmm, that doesn’t look like a link. Paste a URL from YouTube, Spotify, SoundCloud… or a direct audio / radio-stream address.', 'warn');
+        this.setMsg('mp.badLink', 'warn');
         return false;
       }
       this.setMsg('');
@@ -465,7 +495,7 @@
       }
       this.save();
       this.renderQueue();
-      if (playNow) this.playIndex(idx); else { this.renderBar(); NS.toast('Added to your music list'); }
+      if (playNow) this.playIndex(idx); else { this.renderBar(); NS.toast(tr('toast.added')); }
       return true;
     },
 
@@ -482,7 +512,7 @@
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
       if (!/^\s*(https?:\/\/|spotify:)\S+\s*$/i.test(text)) return;
-      if (this.addLink(text, true)) { e.preventDefault(); NS.toast('Playing your pasted link ♪'); }
+      if (this.addLink(text, true)) { e.preventDefault(); NS.toast(tr('toast.pasted')); }
     },
 
     /* ---------------------------------------------------------- playback */
@@ -505,7 +535,7 @@
       this.save();
       this.renderQueue();
       const parsed = parseLink(it.url);
-      if (!parsed) { this.setMsg('That link can’t be played.', 'warn'); return; }
+      if (!parsed) { this.setMsg('mp.cantPlay', 'warn'); return; }
       this.startItem(it, parsed);
     },
 
@@ -516,7 +546,7 @@
         state: (p) => { this.playing = p; this.renderBar(); },
         title: (t) => { if (t && it.title !== t) { it.title = t; this.save(); this.renderQueue(); this.renderBar(); } },
         ended: () => this.onEnded(),
-        error: (m) => { this.setMsg(m, 'warn'); this.playing = false; this.renderBar(); },
+        error: (m, p) => { this.setMsg(m, 'warn', p); this.playing = false; this.renderBar(); },
         time: (t, d) => this.onTime(t, d),
         useNative: () => this.renderBar(),
         fallbackToEmbed: () => { if (this.items[this.cur] === it) this.startItem(it, { ...parsed, kind: 'web' }, true); },
@@ -538,8 +568,8 @@
         this.ui.embed.style.height = eng.ratio ? '' : (eng.height || 200) + 'px';
       }
       if (parsed.kind === 'audio' || (parsed.kind === 'web' && !forceEmbed)) eng.play();
-      if (['spotify', 'apple', 'deezer'].includes(parsed.kind)) this.setMsg('Press play inside the player below – these services don’t allow automatic playback.', 'info');
-      if (parsed.kind === 'web' && forceEmbed) this.setMsg('Showing the page itself – it may not allow embedding. You can also paste a direct stream or file URL.', 'info');
+      if (['spotify', 'apple', 'deezer'].includes(parsed.kind)) this.setMsg('mp.pressInside', 'info');
+      if (parsed.kind === 'web' && forceEmbed) this.setMsg('mp.showingPage', 'info');
       this.renderBar();
       if (!this.open) this.ui.root.classList.add('flash');
       setTimeout(() => this.ui.root.classList.remove('flash'), 900);
@@ -582,11 +612,11 @@
     },
 
     onTime(t, d) {
-      this.dur = d;
+      this.dur = d; this.pos = t;
       if (d) {
         this.ui.seek.value = Math.round(t / d * 1000);
         this.ui.time.textContent = `${NS.fmtTime(t)} / ${NS.fmtTime(d)}`;
-      } else this.ui.time.textContent = t ? NS.fmtTime(t) + ' · live' : '';
+      } else this.ui.time.textContent = t ? NS.fmtTime(t) + ' · ' + tr('mp.live') : '';
     },
   };
 

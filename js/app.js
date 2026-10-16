@@ -3,6 +3,7 @@
   'use strict';
   const NS = window.SNC;
   const { h, $ } = NS;
+  const t = NS.t;
   const S = NS.settings;
 
   /* ================================================================ modal */
@@ -21,7 +22,7 @@
         if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) { /* ignore */ } }
       };
       const dlg = h('div.modal' + (wide ? '.wide' : '') + (className ? '.' + className : ''), { role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
-        h('div.modal-head', null, h('h2', null, title), h('button.ico', { 'aria-label': 'Close', title: 'Close', onclick: close }, '✕')),
+        h('div.modal-head', null, h('h2', null, title), h('button.ico', { 'aria-label': t('btn.close'), title: t('btn.close'), onclick: close }, '✕')),
         h('div.modal-body', null, body),
         actions && actions.length ? h('div.modal-actions', null, actions) : null);
       const wrap = h('div.modal-wrap', { onpointerdown: (e) => { if (e.target === wrap) close(); } }, dlg);
@@ -40,7 +41,7 @@
     confirm(title, text, okLabel, onOk) {
       const m = NS.modal.open({
         title, body: h('p.confirm-text', null, text),
-        actions: [h('button.btn', { onclick: () => m.close() }, 'Not now'), h('button.btn.primary', { onclick: () => { m.close(); onOk(); } }, okLabel)],
+        actions: [h('button.btn', { onclick: () => m.close() }, t('confirm.later')), h('button.btn.primary', { onclick: () => { m.close(); onOk(); } }, okLabel)],
       });
     },
   };
@@ -48,14 +49,17 @@
   /* ================================================================ popup menu */
   let openMenu = null;
   function closeMenu() { if (openMenu) { openMenu.remove(); openMenu = null; } }
-  function popMenu(anchor, items) {
+  function popMenu(anchor, items, opts) {
     closeMenu();
     const menu = h('div.menu', { role: 'menu' }, items.map(it => it === '-' ? h('hr') : h('button' + (it.on ? '.on' : ''), { role: 'menuitem', onclick: () => { closeMenu(); it.run(); } },
-      h('span.menu-check', null, it.on ? '✓' : ''), h('span', null, it.label), it.hint ? h('small', null, it.hint) : null)));
+      h('span.menu-check', null, it.on ? '✓' : ''), h('span' + (it.cls ? '.' + it.cls : ''), null, it.label), it.hint ? h('small', null, it.hint) : null)));
     document.body.appendChild(menu);
     const r = anchor.getBoundingClientRect();
-    menu.style.top = (r.bottom + 6) + 'px';
-    menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.left)) + 'px';
+    // menus opened from the dock flip upwards so they stay on screen
+    const up = (opts && opts.up) || (r.bottom + 6 + menu.offsetHeight > window.innerHeight - 8 && r.top > menu.offsetHeight + 14);
+    if (up) { menu.classList.add('up'); menu.style.top = Math.max(8, r.top - 6 - menu.offsetHeight) + 'px'; } else menu.style.top = (r.bottom + 6) + 'px';
+    const left = opts && opts.alignRight ? r.right - menu.offsetWidth : r.left;
+    menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, left)) + 'px';
     openMenu = menu;
     setTimeout(() => document.addEventListener('pointerdown', function off(e) {
       if (!menu.contains(e.target)) { closeMenu(); document.removeEventListener('pointerdown', off, true); }
@@ -66,7 +70,7 @@
   function startNew(kind) {
     const g = NS.game;
     const go = () => { NS.modal.closeAll(); g.newGame(kind === 'daily' ? { daily: true } : kind === 'replay' ? { replay: true } : {}); };
-    if (g.started && !g.won && g.state.moves > 8) NS.modal.confirm('Start a new deal?', 'Your current game will be put away (it counts toward your streak).', 'Deal me in', go);
+    if (g.started && !g.won && g.state.moves > 8) NS.modal.confirm(t('confirm.newTitle'), t('confirm.newText'), t('confirm.newOk'), go);
     else go();
   }
 
@@ -74,16 +78,16 @@
     const g = NS.game, st = g.state, s = g.stats;
     const zen = S.data.game.zen;
     const m = NS.modal.open({
-      title: 'Beautifully done 🎉',
+      title: t('win.title'),
       className: 'win',
       body: h('div.win-body', null,
-        h('p', null, 'Every card is home. Take a breath – you earned it.'),
+        h('p', null, t('win.text')),
         zen ? null : h('div.win-grid', null,
-          h('div', null, h('b', null, NS.fmtTime(g.elapsed)), h('span', null, 'time')),
-          h('div', null, h('b', null, st.moves), h('span', null, 'moves')),
-          h('div', null, h('b', null, st.score), h('span', null, 'score'))),
-        zen ? null : h('p.win-sub', null, `Best time ${NS.fmtTime(s.bestTime)} · streak ${s.streak} · ${s.won}/${s.played} won`)),
-      actions: [h('button.btn', { onclick: () => m.close() }, 'Admire the table'), h('button.btn.primary', { autofocus: true, onclick: () => { m.close(); g.newGame(); } }, 'Another one')],
+          h('div', null, h('b', null, NS.fmtTime(g.elapsed)), h('span', null, t('stat.time'))),
+          h('div', null, h('b', null, st.moves), h('span', null, t('stat.moves'))),
+          h('div', null, h('b', null, st.score), h('span', null, t('stat.score')))),
+        zen ? null : h('p.win-sub', null, t('win.sub', { best: NS.fmtTime(s.bestTime), streak: s.streak, won: s.won, played: s.played }))),
+      actions: [h('button.btn', { onclick: () => m.close() }, t('win.admire')), h('button.btn.primary', { autofocus: true, onclick: () => { m.close(); g.newGame(); } }, t('win.again'))],
     });
   }
 
@@ -120,6 +124,7 @@
     applyAll('*');
     NS.game.init(NS.board);
 
+    NS.i18n.applyStatic();
     NS.widgets.init({ left: $('#rail-left'), right: $('#rail-right'), drawerList: $('#drawer-list'), tray: $('#tray') });
     NS.music.init($('#music'));
 
@@ -127,17 +132,20 @@
     const g = NS.game;
     const undoBtn = $('#btn-undo'), finishBtn = $('#btn-finish'), miniStats = $('#mini-stats');
     $('#btn-new').addEventListener('click', (e) => popMenu(e.currentTarget, [
-      { label: 'New deal', hint: 'N', run: () => startNew('new') },
-      { label: 'Today’s deal', hint: 'same for everyone', run: () => startNew('daily') },
-      { label: 'Replay this deal', run: () => startNew('replay') },
+      { label: t('menu.newDeal'), hint: 'N', run: () => startNew('new') },
+      { label: t('menu.daily'), hint: t('menu.dailyHint'), run: () => startNew('daily') },
+      { label: t('menu.replay'), run: () => startNew('replay') },
       '-',
-      { label: 'Draw one card', on: S.data.game.drawCount === 1, run: () => setDraw(1) },
-      { label: 'Draw three cards', on: S.data.game.drawCount === 3, run: () => setDraw(3) },
+      { label: t('menu.draw1'), on: S.data.game.drawCount === 1, run: () => setDraw(1) },
+      { label: t('menu.draw3'), on: S.data.game.drawCount === 3, run: () => setDraw(3) },
     ]));
     function setDraw(n) {
       S.set('game.drawCount', n);
-      if (!g.started || g.won) startNew('new'); else NS.toast(`Draw ${n === 1 ? 'one' : 'three'} – from your next deal`);
+      if (!g.started || g.won) startNew('new'); else NS.toast(t(n === 1 ? 'toast.draw1Next' : 'toast.draw3Next'));
     }
+    $('#btn-lang').addEventListener('click', (e) => popMenu(e.currentTarget, NS.i18n.LANGS.map(l => ({
+      label: l.name, on: NS.i18n.current() === l.code, cls: 'menu-native', run: () => NS.i18n.set(l.code),
+    })), { up: true, alignRight: true }));
     undoBtn.addEventListener('click', () => g.undoMove());
     $('#btn-hint').addEventListener('click', () => g.hint());
     finishBtn.addEventListener('click', () => g.autoFinish());
@@ -153,13 +161,13 @@
       const can = st && NS.K.canAutoFinish(st);
       finishBtn.hidden = !can;
       finishBtn.classList.toggle('active', g.busy);
-      finishBtn.querySelector('.lbl').textContent = g.busy ? 'Stop' : 'Finish';
+      finishBtn.querySelector('.lbl').textContent = t(g.busy ? 'btn.stop' : 'btn.finish');
       const zen = S.data.game.zen;
       miniStats.hidden = zen;
       miniStats.innerHTML = '';
-      if (!zen) miniStats.append(h('span', null, st.moves, h('small', null, ' moves')), h('span', null, h('small', null, ' · '), NS.fmtTime(g.elapsed)), h('span', null, h('small', null, ' · '), st.score, h('small', null, ' pts')));
+      if (!zen) miniStats.append(h('span', null, st.moves, h('small', null, ' ' + t('stat.moves'))), h('span', null, h('small', null, ' · '), NS.fmtTime(g.elapsed)), h('span', null, h('small', null, ' · '), st.score, h('small', null, ' ' + t('stat.pts'))));
     }
-    NS.bus.on('state', refreshBar); NS.bus.on('tick', refreshBar); NS.bus.on('settings', refreshBar);
+    NS.bus.on('state', refreshBar); NS.bus.on('tick', refreshBar); NS.bus.on('settings', refreshBar); NS.bus.on('lang', refreshBar);
     refreshBar();
 
     NS.bus.on('winscreen', showWin);
@@ -175,8 +183,8 @@
         btn.classList.toggle('signed', !!u);
         btn.classList.toggle('guest', !u);
         btn.dataset.status = st;
-        btn.title = u ? 'Account – ' + (u.name || u.email) : 'Sign in to save your game';
-        btn.querySelector('.acct-lbl').textContent = u ? ((u.name || u.email || 'Account').split(' ')[0]) : (st === 'connecting' ? '…' : 'Login');
+        btn.title = u ? t('tip.account', { name: u.name || u.email }) : t('tip.login');
+        btn.querySelector('.acct-lbl').textContent = u ? ((u.name || u.email || t('tab.account')).split(' ')[0]) : (st === 'connecting' ? '…' : t('btn.login'));
         btn.disabled = st === 'connecting';
         const ico = btn.querySelector('.acct-ico');
         ico.innerHTML = '';
@@ -184,7 +192,7 @@
         else ico.textContent = u ? (u.name || u.email || '?').slice(0, 1).toUpperCase() : '👤';
         if (u) ico.append(h('span.sdot'));
       };
-      NS.bus.on('cloud', paint);
+      NS.bus.on('cloud', paint); NS.bus.on('lang', paint);
       paint();
       NS.cloud.init();
     }

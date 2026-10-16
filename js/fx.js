@@ -163,7 +163,7 @@
 
     const hint = document.createElement('div');
     hint.id = 'cascade-hint';
-    hint.textContent = 'tap anywhere to continue';
+    hint.textContent = NS.t('fx.tap');
     document.body.appendChild(hint);
     function finish() {
       if (finished) return;
